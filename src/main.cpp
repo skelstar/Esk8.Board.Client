@@ -217,7 +217,7 @@ void bleDisconnected()
 
 void bleReceivedNotify()
 {
-  Serial.printf("Received: %.1fV %.1fAh \n", vescdata.batteryVoltage, vescdata.ampHours);
+  Serial.printf("Received: %.1fV %.1fAh %.1fm \n", vescdata.batteryVoltage, vescdata.ampHours, vescdata.odometer);
 }
 
 #include "bleClient.h"
