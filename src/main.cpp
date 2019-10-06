@@ -81,9 +81,11 @@ State state_connecting([]{
   lcdConnectingPage(vescdata.ampHours, vescdata.odometer);
 }, NULL, NULL);
 //-------------------------------
-State state_connected([]{ 
-  lcdMessage("connected!"); 
-}, NULL, NULL);
+State state_connected(
+  NULL, //[] { lcdMessage("connected!"); }, 
+  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); }, 
+  NULL
+);
 //-------------------------------
 State state_battery_voltage_screen(
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); },
@@ -126,7 +128,8 @@ void addFsmTransitions() {
 
   event = SERVER_CONNECTED;
   fsm.add_transition(&state_connecting, &state_connected, event, NULL);
-  fsm.add_timed_transition(&state_connected, &state_battery_voltage_screen, 1000, NULL);
+  // when state connected is entered it will transition to new state after 3 seconds
+  fsm.add_timed_transition(&state_connected, &state_trip_page, 3000, NULL);
 
   event = BUTTON_CLICK;
   fsm.add_transition(&state_battery_voltage_screen, &state_trip_page, event, NULL);
