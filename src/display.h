@@ -87,6 +87,17 @@ void lcd_medium_float_text(
   u8g2.drawStr(128-width, y, buff2);
 }
 
+void lcd_line_text(uint8_t x, uint8_t y, char* text, bool centered) {
+  if (centered) {
+    u8g2.setFontPosCenter();
+  }
+  else {
+    u8g2.setFontPosTop();
+  }
+  u8g2.setFont( FONT_SIZE_MED ); // full
+  u8g2.drawStr(x, y, text);
+}
+
 void lcdTripPage(float ampHours, float totalAmpHours, float odo, float totalOdo, bool update) {
   if (!update) {
     return;
@@ -97,6 +108,20 @@ void lcdTripPage(float ampHours, float totalAmpHours, float odo, float totalOdo,
   u8g2.drawHLine(0, 64/2, 128);
   lcd_medium_float_text(0, FONT_SIZE_MED_LINE_3, "Trip", "%skm", odo);
   lcd_medium_float_text(0, FONT_SIZE_MED_LINE_4, "Total", "%skm", totalOdo);
+  u8g2.sendBuffer();
+}
+
+#define BETWEEN_LINE1_AND_LINE2   64/4
+#define BETWEEN_LINE2_AND_LINE3   (64/4)*2
+
+void lcdConnectingPage(float ampHours, float odo) {
+  u8g2.clearBuffer();
+  // int width = u8g2.getStrWidth("...connecting");
+  // u8g2.drawStr(128 / 2 - width / 2, 64 / 2, "...connecting");
+  lcd_line_text(0, FONT_SIZE_MED_LINE_1, "..connecting", /*centered*/ false);
+  u8g2.drawHLine(0, BETWEEN_LINE2_AND_LINE3, 128);
+  lcd_medium_float_text(0, FONT_SIZE_MED_LINE_3, "Trip", "%sAh", ampHours);
+  lcd_medium_float_text(0, FONT_SIZE_MED_LINE_4, "Trip", "%skm", odo);
   u8g2.sendBuffer();
 }
 

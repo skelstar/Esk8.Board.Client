@@ -77,12 +77,13 @@ enum EventsEnum
 
 //-------------------------------
 State state_connecting([]{
-  lcdMessage("connecting");
+  // lcdMessage("connecting");
+  lcdConnectingPage(vescdata.ampHours, vescdata.odometer);
 }, NULL, NULL);
 //-------------------------------
 State state_connected([]{ 
-    lcdMessage("connected"); 
-  }, NULL, NULL);
+  lcdMessage("connected!"); 
+}, NULL, NULL);
 //-------------------------------
 State state_battery_voltage_screen(
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); },
@@ -118,37 +119,37 @@ State state_button_held_powerdown_window(
 Fsm fsm(&state_connecting);
 
 void addFsmTransitions() {
-  // SERVER_DISCONNECTED -> state_connecting
+
   uint8_t event = SERVER_DISCONNECTED;
   fsm.add_transition(&state_battery_voltage_screen, &state_connecting, event, NULL);
   fsm.add_transition(&state_trip_page, &state_connecting, event, NULL);
-  // SERVER_CONNECTED
+
   event = SERVER_CONNECTED;
   fsm.add_transition(&state_connecting, &state_connected, event, NULL);
   fsm.add_timed_transition(&state_connected, &state_battery_voltage_screen, 1000, NULL);
-  // BUTTON_CLICK
+
   event = BUTTON_CLICK;
   fsm.add_transition(&state_battery_voltage_screen, &state_trip_page, event, NULL);
   fsm.add_transition(&state_trip_page, &state_battery_voltage_screen, event, NULL);
-  // MOVING -> state_motor_current_screen
+
   event = MOVING;
   fsm.add_transition(&state_trip_page, &state_moving_screen, event, NULL);
-  // STOPPED_MOVING
+
   event = STOPPED_MOVING;
   fsm.add_transition(&state_moving_screen, &state_trip_page, event, NULL);
-  //BUTTON_BEING_HELD
+
   event = BUTTON_BEING_HELD;
   fsm.add_transition(&state_connecting, &state_button_being_held, event, NULL);
   fsm.add_transition(&state_battery_voltage_screen, &state_button_being_held, event, NULL);
   fsm.add_transition(&state_trip_page, &state_button_being_held, event, NULL);
-  //HELD_POWERDOWN_WINDOW
+
   event = HELD_POWERDOWN_WINDOW;
   fsm.add_transition(&state_button_being_held, &state_button_held_powerdown_window, event, NULL);
-  //HELD_CLEAR_TRIP_WINDOW
+
   event = HELD_CLEAR_TRIP_WINDOW;
-  // SENT_CLEAR_TRIP_ODO
+
   event = SENT_CLEAR_TRIP_ODO;
-  // EVENT_HELD_RELEASED
+
   event = BUTTON_CLICK;
   fsm.add_transition(&state_button_being_held, &state_trip_page, event, NULL);
 }
