@@ -56,6 +56,7 @@ bool valueChanged(uint8_t measure) {
     case CHECK_MOTOR_CURRENT:
       return true;
   }
+  return false;
 }
 
 #include "utils.h"
@@ -77,12 +78,16 @@ enum EventsEnum
 
 //-------------------------------
 State state_connecting([]{
-  lcdMessage("connecting");
+  // lcdMessage("connecting");
+  Serial.printf("state_connecting\n");
+  lcdConnectingPage(vescdata.ampHours, vescdata.odometer);
 }, NULL, NULL);
 //-------------------------------
-State state_connected([]{ 
-    lcdMessage("connected"); 
-  }, NULL, NULL);
+State state_connected(
+  NULL, //[] { lcdMessage("connected!"); }, 
+  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); }, 
+  NULL
+);
 //-------------------------------
 State state_battery_voltage_screen(
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); },
@@ -103,7 +108,7 @@ State state_moving_screen(
 );
 //-------------------------------
 State state_button_being_held(
-  [] { lcdMessage("..."); }, 
+  [] { lcdMessage("..."); Serial.printf("state_button_being_held\n"); }, 
   NULL, 
   NULL
 );
@@ -118,37 +123,38 @@ State state_button_held_powerdown_window(
 Fsm fsm(&state_connecting);
 
 void addFsmTransitions() {
-  // SERVER_DISCONNECTED -> state_connecting
+
   uint8_t event = SERVER_DISCONNECTED;
   fsm.add_transition(&state_battery_voltage_screen, &state_connecting, event, NULL);
   fsm.add_transition(&state_trip_page, &state_connecting, event, NULL);
-  // SERVER_CONNECTED
+
   event = SERVER_CONNECTED;
   fsm.add_transition(&state_connecting, &state_connected, event, NULL);
-  fsm.add_timed_transition(&state_connected, &state_battery_voltage_screen, 1000, NULL);
-  // BUTTON_CLICK
+  // when state connected is entered it will transition to new state after 3 seconds
+  fsm.add_timed_transition(&state_connected, &state_trip_page, 3000, NULL);
+
   event = BUTTON_CLICK;
   fsm.add_transition(&state_battery_voltage_screen, &state_trip_page, event, NULL);
   fsm.add_transition(&state_trip_page, &state_battery_voltage_screen, event, NULL);
-  // MOVING -> state_motor_current_screen
+
   event = MOVING;
   fsm.add_transition(&state_trip_page, &state_moving_screen, event, NULL);
-  // STOPPED_MOVING
+
   event = STOPPED_MOVING;
   fsm.add_transition(&state_moving_screen, &state_trip_page, event, NULL);
-  //BUTTON_BEING_HELD
+
   event = BUTTON_BEING_HELD;
   fsm.add_transition(&state_connecting, &state_button_being_held, event, NULL);
   fsm.add_transition(&state_battery_voltage_screen, &state_button_being_held, event, NULL);
   fsm.add_transition(&state_trip_page, &state_button_being_held, event, NULL);
-  //HELD_POWERDOWN_WINDOW
+
   event = HELD_POWERDOWN_WINDOW;
   fsm.add_transition(&state_button_being_held, &state_button_held_powerdown_window, event, NULL);
-  //HELD_CLEAR_TRIP_WINDOW
+
   event = HELD_CLEAR_TRIP_WINDOW;
-  // SENT_CLEAR_TRIP_ODO
+
   event = SENT_CLEAR_TRIP_ODO;
-  // EVENT_HELD_RELEASED
+
   event = BUTTON_CLICK;
   fsm.add_transition(&state_button_being_held, &state_trip_page, event, NULL);
 }
@@ -183,7 +189,6 @@ void bleReceivedNotify()
 #define BtnPin 35
 /* ---------------------------------------------- */
 
-#define PULLUP true
 #define OFFSTATE HIGH
 
 void sendClearTripOdoToMonitor();
@@ -194,51 +199,42 @@ void deepSleep();
 void pureDeepSleep();
 
 void listener_Button(int eventCode, int eventPin, int eventParam);
-myPushButton button(BtnPin, PULLUP, OFFSTATE, listener_Button);
-void listener_Button(int eventCode, int eventPin, int eventParam)
-{
-
-  bool sleepTimeWindow = eventParam >= 2 && eventParam <= 3;
-  bool clearTripWindow = eventParam >= 4 && eventParam <= 5;
-
-  switch (eventCode)
+myPushButton button(BtnPin, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
   {
-    case button.EV_BUTTON_PRESSED:
-      break;
+    bool sleepTimeWindow = eventParam >= 2 && eventParam <= 3;
+    // bool clearTripWindow = eventParam >= 4 && eventParam <= 5;
 
-    case button.EV_RELEASED:
-      if (sleepTimeWindow)
-      {
-        deepSleep();
+    switch (eventCode)
+    {
+      case button.EV_BUTTON_PRESSED:
         break;
-      }
-      if (clearTripWindow)
-      {
+ 
+      case button.EV_HELD_SECONDS:
+        if (sleepTimeWindow)
+        {
+          fsm.trigger(HELD_POWERDOWN_WINDOW);
+        }
+        else
+        {
+          fsm.trigger(BUTTON_BEING_HELD);
+        }
         break;
-      }
-      else
-      {
-        fsm.trigger(BUTTON_CLICK);
-      }
-      break;
-    case button.EV_DOUBLETAP:
-      break;
-    case button.EV_HELD_SECONDS:
-      Serial.printf("HELD %d seconds \n", eventParam);
-      if (sleepTimeWindow)
-      {
-        fsm.trigger(HELD_POWERDOWN_WINDOW);
-      }
-      else if (clearTripWindow)
-      {
-      }
-      else
-      {
-        fsm.trigger(BUTTON_BEING_HELD);
-      }
-      break;
-  }
-}
+
+      case button.EV_RELEASED:
+        if (sleepTimeWindow)
+        {
+          deepSleep();
+          break;
+        }
+        else
+        {
+          fsm.trigger(BUTTON_CLICK);
+        }
+        break;
+      case button.EV_DOUBLETAP:
+        break;
+    }
+  });
 
 void checkBoardMoving() {
   if (oldvescdata.moving != vescdata.moving)
@@ -313,9 +309,7 @@ void pureDeepSleep()
 
 void setup()
 {
-  // put your setup code here, to run once:
   Wire.begin(21, 22, 100000);
-  // u8x8.begin();
   u8g2.begin();
 
   Serial.begin(115200);
