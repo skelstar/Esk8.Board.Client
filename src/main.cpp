@@ -56,6 +56,7 @@ bool valueChanged(uint8_t measure) {
     case CHECK_MOTOR_CURRENT:
       return true;
   }
+  return false;
 }
 
 #include "utils.h"
@@ -107,7 +108,7 @@ State state_moving_screen(
 );
 //-------------------------------
 State state_button_being_held(
-  [] { lcdMessage("..."); }, 
+  [] { lcdMessage("..."); Serial.printf("state_button_being_held\n"); }, 
   NULL, 
   NULL
 );
@@ -188,7 +189,6 @@ void bleReceivedNotify()
 #define BtnPin 35
 /* ---------------------------------------------- */
 
-#define PULLUP true
 #define OFFSTATE HIGH
 
 void sendClearTripOdoToMonitor();
