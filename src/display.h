@@ -40,29 +40,34 @@ void lcdBarGraph(float percentage)
   u8g2.drawBox(0, 64 - BAR_GRAPH_THICKNESS, x2, BAR_GRAPH_THICKNESS);
 }
 //--------------------------------------------------------------------------------
+void clearScreen() {
+  u8g2.clearBuffer();
+  u8g2.sendBuffer();
+}
+//--------------------------------------------------------------------------------
 void lcdMovingScreen(float current)
 {
-  u8g2.clearBuffer();
-  u8g2.setFontPosCenter();
-  // number
-  char number[8];
-  char buff[8];                           
-  dtostrf(vescdata.motorCurrent, 2, 1, buff);
-  sprintf(number, "%sA", buff);
+  // u8g2.clearBuffer();
+  // u8g2.setFontPosCenter();
+  // // number
+  // char number[8];
+  // char buff[8];                           
+  // dtostrf(vescdata.motorCurrent, 2, 1, buff);
+  // sprintf(number, "%sA", buff);
   
-  int vpadding = 3;
-  int paddingFromRight = 10;
-  u8g2.setFont( FONT_SIZE_LG ); // full
-  int width = u8g2.getStrWidth(number);
-  int height = u8g2.getMaxCharHeight();
-  u8g2.drawStr(128 - width - paddingFromRight, 64 / 2, number);
-  u8g2.setFont( FONT_SIZE_XSMALL );
-  u8g2.drawStr(128 - u8g2.getStrWidth("MOTOR CURRENT") - paddingFromRight, 64/2 - height/2 - vpadding, "MOTOR CURRENT");
-  if (vescdata.motorCurrent > 0)
-  {
-    lcdBarGraph(vescdata.motorCurrent / 40.0);
-  }
-  u8g2.sendBuffer();
+  // int vpadding = 3;
+  // int paddingFromRight = 10;
+  // u8g2.setFont( FONT_SIZE_LG ); // full
+  // int width = u8g2.getStrWidth(number);
+  // int height = u8g2.getMaxCharHeight();
+  // u8g2.drawStr(128 - width - paddingFromRight, 64 / 2, number);
+  // u8g2.setFont( FONT_SIZE_XSMALL );
+  // u8g2.drawStr(128 - u8g2.getStrWidth("MOTOR CURRENT") - paddingFromRight, 64/2 - height/2 - vpadding, "MOTOR CURRENT");
+  // if (vescdata.motorCurrent > 0)
+  // {
+  //   lcdBarGraph(vescdata.motorCurrent / 40.0);
+  // }
+  // u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
 void lcd_medium_float_text(

@@ -10,9 +10,9 @@
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
-#define BATTERY_VOLTAGE_FULL 44.2
-#define BATTERY_VOLTAGE_CUTOFF_START 37.4
-#define BATTERY_VOLTAGE_CUTOFF_END 34.1
+#define BATTERY_VOLTAGE_FULL          4.2 * 11   // 46.2
+#define BATTERY_VOLTAGE_CUTOFF_START  3.4 * 11 // 37.4
+#define BATTERY_VOLTAGE_CUTOFF_END    3.1 * 11 //34.1
 
 #define LED_ON HIGH
 #define LED_OFF LOW
@@ -33,12 +33,9 @@ static boolean serverConnected = false;
 struct VESC_DATA
 {
   float batteryVoltage;
-  float motorCurrent;
   bool moving;
   float ampHours;
-  float totalAmpHours;
   float odometer; // in kilometers
-  float totalOdometer;
 };
 VESC_DATA vescdata, oldvescdata;
 
@@ -57,11 +54,7 @@ bool valueChanged(uint8_t measure) {
       }
       return false;
     case CHECK_MOTOR_CURRENT:
-      if (oldvescdata.motorCurrent != vescdata.motorCurrent) {
-        oldvescdata.motorCurrent = vescdata.motorCurrent;
-        return true;
-      }
-      return false;
+      return true;
   }
 }
 
@@ -82,78 +75,51 @@ enum EventsEnum
   HELD_RELEASED
 } event;
 
-// connecting
+//-------------------------------
 State state_connecting([]{
   lcdMessage("connecting");
 }, NULL, NULL);
-
-// connected
+//-------------------------------
 State state_connected([]{ 
     lcdMessage("connected"); 
   }, NULL, NULL);
 //-------------------------------
-
-// battery_voltage_screen
-void enter_battery_voltage_screen() { 
-  drawBattery( getBatteryPercentage(vescdata.batteryVoltage) ); 
-}
-void check_battery_voltage_changed()
-{
-  if ( valueChanged(CHECK_BATT_VOLTS) ) {
-    drawBattery( getBatteryPercentage(vescdata.batteryVoltage) );
-  }
-}
 State state_battery_voltage_screen(
-    // &enter_battery_voltage_screen,
+    [] {
+      drawBattery( getBatteryPercentage(vescdata.batteryVoltage) );
+    },
     [] {
       if ( valueChanged(CHECK_BATT_VOLTS) ) {
         drawBattery( getBatteryPercentage(vescdata.batteryVoltage) );
       }
     },
-    &check_battery_voltage_changed,
     NULL);
 //-------------------------------
-// motor_current_screen
-void enter_motor_current_screen() { 
-  lcdMovingScreen(vescdata.motorCurrent); 
-}
-void check_motor_current_changed()
-{
-  if (valueChanged(CHECK_MOTOR_CURRENT)) {
-    lcdMovingScreen(vescdata.motorCurrent);
-  }
-}
-State state_motor_current_screen(
-    &enter_motor_current_screen,
-    &check_motor_current_changed,
-    NULL);
-//-------------------------------
-// state_page_2
-void enter_page_two();
-void check_page_two_data_changed();
-State state_page_two(
-  &enter_page_two, 
-  &check_page_two_data_changed, 
+State state_trip_page(
+  [] { 
+    lcdPage2(vescdata.ampHours, 0.0, vescdata.odometer, 0.0); 
+  }, 
+  [] {
+    if (valueChanged(CHECK_AMP_HOURS)) {
+      lcdPage2(vescdata.ampHours, 0.0, vescdata.odometer, 0.0);
+    }
+  }, 
   NULL);
-void enter_page_two() { lcdPage2(vescdata.ampHours, vescdata.totalAmpHours, vescdata.odometer, vescdata.totalOdometer); }
-void check_page_two_data_changed()
-{
-  if (valueChanged(CHECK_AMP_HOURS)) {
-    lcdPage2(vescdata.ampHours, vescdata.totalAmpHours, vescdata.odometer, vescdata.totalOdometer);
-  }
-}
 //-------------------------------
-// button_held_powerdown_window
-void enter_button_held_powerdown_window() { lcdMessage("power down?"); }
-State state_button_held_powerdown_window(&enter_button_held_powerdown_window, NULL, NULL);
+State state_moving_screen(
+  [] { clearScreen(); }, 
+  NULL, 
+  NULL
+);
 //-------------------------------
-// button_held_clear_trip_window
-void enter_button_held_clear_trip_window() { lcdMessage("clear trip?"); }
-State state_button_held_clear_trip_window(&enter_button_held_clear_trip_window, NULL, NULL);
+State state_button_being_held([] {
+  lcdMessage("..."); 
+}, NULL, NULL);
 //-------------------------------
-// button_being_held
-void enter_button_being_held() { lcdMessage("..."); }
-State state_button_being_held(&enter_button_being_held, NULL, NULL);
+State state_button_held_powerdown_window([] {
+  lcdMessage("power down?");
+}, NULL, NULL);
+//-------------------------------
 
 Fsm fsm(&state_connecting);
 
@@ -161,43 +127,36 @@ void addFsmTransitions() {
   // SERVER_DISCONNECTED -> state_connecting
   uint8_t event = SERVER_DISCONNECTED;
   fsm.add_transition(&state_battery_voltage_screen, &state_connecting, event, NULL);
-  fsm.add_transition(&state_page_two, &state_connecting, event, NULL);
-  fsm.add_transition(&state_motor_current_screen, &state_connecting, event, NULL);
+  fsm.add_transition(&state_trip_page, &state_connecting, event, NULL);
   // SERVER_CONNECTED
   event = SERVER_CONNECTED;
   fsm.add_transition(&state_connecting, &state_connected, event, NULL);
   fsm.add_timed_transition(&state_connected, &state_battery_voltage_screen, 1000, NULL);
   // BUTTON_CLICK
   event = BUTTON_CLICK;
-  fsm.add_transition(&state_battery_voltage_screen, &state_page_two, event, NULL);
-  fsm.add_transition(&state_page_two, &state_motor_current_screen, event, NULL);
-  fsm.add_transition(&state_motor_current_screen, &state_battery_voltage_screen, event, NULL);
+  fsm.add_transition(&state_battery_voltage_screen, &state_trip_page, event, NULL);
+  fsm.add_transition(&state_trip_page, &state_battery_voltage_screen, event, NULL);
   // MOVING -> state_motor_current_screen
   event = MOVING;
-  fsm.add_transition(&state_battery_voltage_screen, &state_motor_current_screen, event, NULL);
-  fsm.add_transition(&state_page_two, &state_motor_current_screen, event, NULL);
+  fsm.add_transition(&state_trip_page, &state_moving_screen, event, NULL);
   // STOPPED_MOVING
   event = STOPPED_MOVING;
-  fsm.add_transition(&state_motor_current_screen, &state_page_two, event, NULL);
+  fsm.add_transition(&state_moving_screen, &state_trip_page, event, NULL);
   //BUTTON_BEING_HELD
   event = BUTTON_BEING_HELD;
   fsm.add_transition(&state_connecting, &state_button_being_held, event, NULL);
   fsm.add_transition(&state_battery_voltage_screen, &state_button_being_held, event, NULL);
-  fsm.add_transition(&state_page_two, &state_button_being_held, event, NULL);
-  fsm.add_transition(&state_motor_current_screen, &state_button_being_held, event, NULL);
-  fsm.add_transition(&state_button_held_clear_trip_window, &state_button_being_held, event, NULL);
+  fsm.add_transition(&state_trip_page, &state_button_being_held, event, NULL);
   //HELD_POWERDOWN_WINDOW
   event = HELD_POWERDOWN_WINDOW;
   fsm.add_transition(&state_button_being_held, &state_button_held_powerdown_window, event, NULL);
   //HELD_CLEAR_TRIP_WINDOW
   event = HELD_CLEAR_TRIP_WINDOW;
-  fsm.add_transition(&state_button_held_powerdown_window, &state_button_held_clear_trip_window, event, NULL);
   // SENT_CLEAR_TRIP_ODO
   event = SENT_CLEAR_TRIP_ODO;
-  fsm.add_transition(&state_button_held_clear_trip_window, &state_page_two, event, NULL);
   // EVENT_HELD_RELEASED
   event = BUTTON_CLICK;
-  fsm.add_transition(&state_button_being_held, &state_page_two, event, NULL);
+  fsm.add_transition(&state_button_being_held, &state_trip_page, event, NULL);
 }
 /* ---------------------------------------------- */
 
@@ -261,7 +220,6 @@ void listener_Button(int eventCode, int eventPin, int eventParam)
       }
       if (clearTripWindow)
       {
-        sendClearTripOdoToMonitor();
         break;
       }
       else
@@ -279,7 +237,6 @@ void listener_Button(int eventCode, int eventPin, int eventParam)
       }
       else if (clearTripWindow)
       {
-        fsm.trigger(HELD_CLEAR_TRIP_WINDOW);
       }
       else
       {
