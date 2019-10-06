@@ -78,6 +78,7 @@ enum EventsEnum
 //-------------------------------
 State state_connecting([]{
   // lcdMessage("connecting");
+  Serial.printf("state_connecting\n");
   lcdConnectingPage(vescdata.ampHours, vescdata.odometer);
 }, NULL, NULL);
 //-------------------------------
@@ -320,6 +321,12 @@ void setup()
   setupPeripherals();
 
   // if button held then we can shut down
+  button.serviceEvents();
+  while (button.isPressed())
+  {
+    fsm.run_machine();
+    button.serviceEvents();
+  }
   button.serviceEvents();
 }
 
