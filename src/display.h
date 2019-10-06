@@ -87,7 +87,10 @@ void lcd_medium_float_text(
   u8g2.drawStr(128-width, y, buff2);
 }
 
-void lcdPage2(float ampHours, float totalAmpHours, float odo, float totalOdo) {
+void lcdTripPage(float ampHours, float totalAmpHours, float odo, float totalOdo, bool update) {
+  if (!update) {
+    return;
+  }
   u8g2.clearBuffer();
   lcd_medium_float_text(0, FONT_SIZE_MED_LINE_1, "Trip", "%sAh", ampHours);
   lcd_medium_float_text(0, FONT_SIZE_MED_LINE_2, "Total", "%sAh", totalAmpHours);
@@ -113,8 +116,12 @@ void lcdMessage(char *message)
 #define BORDER_SIZE 6
 #define KNOB_HEIGHT 20
 
-void drawBattery(int percent)
+void drawBattery(int percent, bool update)
 {
+  if (!update) {
+    return;
+  }
+
   u8g2.clearBuffer();
   int outsideX = (128 - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
   int outsideY = (64 - BATTERY_HEIGHT) / 2;

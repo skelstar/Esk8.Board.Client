@@ -85,26 +85,16 @@ State state_connected([]{
   }, NULL, NULL);
 //-------------------------------
 State state_battery_voltage_screen(
-    [] {
-      drawBattery( getBatteryPercentage(vescdata.batteryVoltage) );
-    },
-    [] {
-      if ( valueChanged(CHECK_BATT_VOLTS) ) {
-        drawBattery( getBatteryPercentage(vescdata.batteryVoltage) );
-      }
-    },
-    NULL);
+  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); },
+  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); },
+  NULL
+);
 //-------------------------------
 State state_trip_page(
-  [] { 
-    lcdPage2(vescdata.ampHours, 0.0, vescdata.odometer, 0.0); 
-  }, 
-  [] {
-    if (valueChanged(CHECK_AMP_HOURS)) {
-      lcdPage2(vescdata.ampHours, 0.0, vescdata.odometer, 0.0);
-    }
-  }, 
-  NULL);
+  [] { lcdTripPage(vescdata.ampHours, 0.0, vescdata.odometer, 0.0, true); }, 
+  [] { lcdTripPage(vescdata.ampHours, 0.0, vescdata.odometer, 0.0, valueChanged(CHECK_AMP_HOURS)); }, 
+  NULL
+);
 //-------------------------------
 State state_moving_screen(
   [] { clearScreen(); }, 
@@ -112,13 +102,17 @@ State state_moving_screen(
   NULL
 );
 //-------------------------------
-State state_button_being_held([] {
-  lcdMessage("..."); 
-}, NULL, NULL);
+State state_button_being_held(
+  [] { lcdMessage("..."); }, 
+  NULL, 
+  NULL
+);
 //-------------------------------
-State state_button_held_powerdown_window([] {
-  lcdMessage("power down?");
-}, NULL, NULL);
+State state_button_held_powerdown_window(
+  [] { lcdMessage("power down?"); }, 
+  NULL, 
+  NULL
+);
 //-------------------------------
 
 Fsm fsm(&state_connecting);
