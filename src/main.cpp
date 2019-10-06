@@ -194,51 +194,42 @@ void deepSleep();
 void pureDeepSleep();
 
 void listener_Button(int eventCode, int eventPin, int eventParam);
-myPushButton button(BtnPin, PULLUP, OFFSTATE, listener_Button);
-void listener_Button(int eventCode, int eventPin, int eventParam)
-{
-
-  bool sleepTimeWindow = eventParam >= 2 && eventParam <= 3;
-  bool clearTripWindow = eventParam >= 4 && eventParam <= 5;
-
-  switch (eventCode)
+myPushButton button(BtnPin, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
   {
-    case button.EV_BUTTON_PRESSED:
-      break;
+    bool sleepTimeWindow = eventParam >= 2 && eventParam <= 3;
+    // bool clearTripWindow = eventParam >= 4 && eventParam <= 5;
 
-    case button.EV_RELEASED:
-      if (sleepTimeWindow)
-      {
-        deepSleep();
+    switch (eventCode)
+    {
+      case button.EV_BUTTON_PRESSED:
         break;
-      }
-      if (clearTripWindow)
-      {
+ 
+      case button.EV_HELD_SECONDS:
+        if (sleepTimeWindow)
+        {
+          fsm.trigger(HELD_POWERDOWN_WINDOW);
+        }
+        else
+        {
+          fsm.trigger(BUTTON_BEING_HELD);
+        }
         break;
-      }
-      else
-      {
-        fsm.trigger(BUTTON_CLICK);
-      }
-      break;
-    case button.EV_DOUBLETAP:
-      break;
-    case button.EV_HELD_SECONDS:
-      Serial.printf("HELD %d seconds \n", eventParam);
-      if (sleepTimeWindow)
-      {
-        fsm.trigger(HELD_POWERDOWN_WINDOW);
-      }
-      else if (clearTripWindow)
-      {
-      }
-      else
-      {
-        fsm.trigger(BUTTON_BEING_HELD);
-      }
-      break;
-  }
-}
+
+      case button.EV_RELEASED:
+        if (sleepTimeWindow)
+        {
+          deepSleep();
+          break;
+        }
+        else
+        {
+          fsm.trigger(BUTTON_CLICK);
+        }
+        break;
+      case button.EV_DOUBLETAP:
+        break;
+    }
+  });
 
 void checkBoardMoving() {
   if (oldvescdata.moving != vescdata.moving)
@@ -313,9 +304,7 @@ void pureDeepSleep()
 
 void setup()
 {
-  // put your setup code here, to run once:
   Wire.begin(21, 22, 100000);
-  // u8x8.begin();
   u8g2.begin();
 
   Serial.begin(115200);
@@ -327,12 +316,6 @@ void setup()
   setupPeripherals();
 
   // if button held then we can shut down
-  button.serviceEvents();
-  while (button.isPressed())
-  {
-    fsm.run_machine();
-    button.serviceEvents();
-  }
   button.serviceEvents();
 }
 
