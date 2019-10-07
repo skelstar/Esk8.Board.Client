@@ -80,7 +80,7 @@ enum EventsEnum
 State state_connecting([]{
   // lcdMessage("connecting");
   Serial.printf("state_connecting\n");
-  lcdConnectingPage(vescdata.ampHours, vescdata.odometer);
+  lcdConnectingPage("connecting", vescdata.ampHours, vescdata.odometer);
 }, NULL, NULL);
 //-------------------------------
 State state_connected(
@@ -119,14 +119,20 @@ State state_button_held_powerdown_window(
   NULL
 );
 //-------------------------------
+State state_server_disconnected(
+  [] { lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); }, 
+  NULL, 
+  NULL
+);
+//-------------------------------
 
 Fsm fsm(&state_connecting);
 
 void addFsmTransitions() {
 
   uint8_t event = SERVER_DISCONNECTED;
-  fsm.add_transition(&state_battery_voltage_screen, &state_connecting, event, NULL);
-  fsm.add_transition(&state_trip_page, &state_connecting, event, NULL);
+  fsm.add_transition(&state_battery_voltage_screen, &state_server_disconnected, event, NULL);
+  fsm.add_transition(&state_trip_page, &state_server_disconnected, event, NULL);
 
   event = SERVER_CONNECTED;
   fsm.add_transition(&state_connecting, &state_connected, event, NULL);

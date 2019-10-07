@@ -114,11 +114,11 @@ void lcdTripPage(float ampHours, float totalAmpHours, float odo, float totalOdo,
 #define BETWEEN_LINE1_AND_LINE2   64/4
 #define BETWEEN_LINE2_AND_LINE3   (64/4)*2
 
-void lcdConnectingPage(float ampHours, float odo) {
+void lcdConnectingPage(char* message, float ampHours, float odo) {
   u8g2.clearBuffer();
   // int width = u8g2.getStrWidth("...connecting");
   // u8g2.drawStr(128 / 2 - width / 2, 64 / 2, "...connecting");
-  lcd_line_text(0, FONT_SIZE_MED_LINE_1, "..connecting", /*centered*/ false);
+  lcd_line_text(0, FONT_SIZE_MED_LINE_1, message, /*centered*/ false);
   u8g2.drawHLine(0, BETWEEN_LINE2_AND_LINE3, 128);
   lcd_medium_float_text(0, FONT_SIZE_MED_LINE_3, "Trip", "%sAh", ampHours);
   lcd_medium_float_text(0, FONT_SIZE_MED_LINE_4, "Trip", "%skm", odo);
