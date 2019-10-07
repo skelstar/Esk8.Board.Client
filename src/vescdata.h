@@ -10,9 +10,6 @@ class VescData
     bool moving;
     float ampHours;
     float odometer; // in kilometers
-
-//   private:
-//     int _pin;
 };
 
 #endif
