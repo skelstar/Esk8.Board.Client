@@ -1,9 +1,9 @@
 #include <Arduino.h>
-#include <SPI.h>
 #include <Wire.h>
 #include <myPushButton.h>
-#include <driver/adc.h>
+// #include <driver/adc.h>
 #include <VescData.h>
+// #include <WiFi.h> // need for powering off wifi
 
 #include <Fsm.h>
 
@@ -274,6 +274,8 @@ void setupPeripherals()
 
 void deepSleep()
 {
+  // WiFi.mode(WIFI_OFF);  // wifi
+  btStop();           // ble
   digitalWrite(LedPin, LED_OFF);
   u8g2.setPowerSave(1);
   delay(500);
