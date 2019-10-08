@@ -72,9 +72,9 @@ enum EventsEnum
 
 //-------------------------------
 State state_connecting(
-  [] {
-    Serial.printf("state_connecting\n");
-    lcdMessage("connecting...");
+  [] { 
+    //lcdMessage("connecting..."); 
+    lcdConnectingPage("connecting...", 272.2, 1.8);
   }, 
   NULL, 
   NULL
@@ -83,6 +83,12 @@ State state_connecting(
 State state_connected(
   NULL,
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); }, 
+  NULL
+);
+//-------------------------------
+State state_server_disconnected(
+  [] { lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); }, 
+  NULL, 
   NULL
 );
 //-------------------------------
@@ -112,12 +118,6 @@ State state_button_being_held(
 //-------------------------------
 State state_button_held_powerdown_window(
   [] { lcdMessage("power down?"); }, 
-  NULL, 
-  NULL
-);
-//-------------------------------
-State state_server_disconnected(
-  [] { lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); }, 
   NULL, 
   NULL
 );
