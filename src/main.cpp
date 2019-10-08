@@ -73,8 +73,7 @@ enum EventsEnum
 //-------------------------------
 State state_connecting(
   [] { 
-    //lcdMessage("connecting..."); 
-    lcdConnectingPage("connecting...", 272.2, 1.8);
+    lcdConnectingPage("connecting...", vescdata.ampHours, vescdata.odometer);
   }, 
   NULL, 
   NULL
