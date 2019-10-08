@@ -3,7 +3,7 @@
 #include <Wire.h>
 #include <myPushButton.h>
 #include <driver/adc.h>
-#include <vescdata.h>
+#include <VescData.h>
 
 #include <Fsm.h>
 
@@ -32,15 +32,6 @@ static boolean serverConnected = false;
 #define CHECK_MOTOR_CURRENT 3
 
 VescData vescdata, oldvescdata;
-
-// struct VESC_DATA
-// {
-//   float batteryVoltage;
-//   bool moving;
-//   float ampHours;
-//   float odometer; // in kilometers
-// };
-// VESC_DATA vescdata, oldvescdata;
 
 bool valueChanged(uint8_t measure) {
   switch (measure) {
