@@ -24,6 +24,9 @@ U8G2_SH1107_64X128_F_4W_HW_SPI u8g2(U8G2_R3, /* cs=*/14, /* dc=*/27, /* reset=*/
 #define FONT_SIZE_MED_LINE_3 FONT_SIZE_MED_LINE_HEIGHT * 2
 #define FONT_SIZE_MED_LINE_4 FONT_SIZE_MED_LINE_HEIGHT * 3
 
+#define BETWEEN_LINE1_AND_LINE2   64/4
+#define BETWEEN_LINE2_AND_LINE3   (64/4)*2
+
 #define FONT_SIZE_LG   u8g2_font_profont29_tr 
 #define FONT_SIZE_LG_LINE_HEIGHT 29
 #define FONT_SIZE_LG_ALL    (64/2) - FONT_SIZE_LG_LINE_HEIGHT/2
@@ -98,6 +101,7 @@ void lcd_line_text(uint8_t x, uint8_t y, char* text, bool centered) {
   u8g2.drawStr(x, y, text);
 }
 
+//--------------------------------------------------------------------------------
 void lcdTripPage(float ampHours, float totalAmpHours, float odo, float totalOdo, bool update) {
   if (!update) {
     return;
@@ -110,21 +114,13 @@ void lcdTripPage(float ampHours, float totalAmpHours, float odo, float totalOdo,
   lcd_medium_float_text(0, FONT_SIZE_MED_LINE_4, "Total", "%skm", totalOdo);
   u8g2.sendBuffer();
 }
-
-#define BETWEEN_LINE1_AND_LINE2   64/4
-#define BETWEEN_LINE2_AND_LINE3   (64/4)*2
-
+//--------------------------------------------------------------------------------
 void lcdConnectingPage(char* message, float ampHours, float odo) {
   u8g2.clearBuffer();
   // int width = u8g2.getStrWidth("...connecting");
   // u8g2.drawStr(128 / 2 - width / 2, 64 / 2, "...connecting");
-  lcd_line_text(0, FONT_SIZE_MED_LINE_1, message, /*centered*/ false);
-  u8g2.drawHLine(0, BETWEEN_LINE2_AND_LINE3, 128);
-  lcd_medium_float_text(0, FONT_SIZE_MED_LINE_3, "Trip", "%sAh", ampHours);
-  lcd_medium_float_text(0, FONT_SIZE_MED_LINE_4, "Trip", "%skm", odo);
   u8g2.sendBuffer();
 }
-
 //--------------------------------------------------------------------------------
 void lcdMessage(char *message)
 {

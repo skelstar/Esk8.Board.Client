@@ -71,14 +71,17 @@ enum EventsEnum
 } event;
 
 //-------------------------------
-State state_connecting([]{
-  // lcdMessage("connecting");
-  Serial.printf("state_connecting\n");
-  lcdConnectingPage("connecting", vescdata.ampHours, vescdata.odometer);
-}, NULL, NULL);
+State state_connecting(
+  [] {
+    Serial.printf("state_connecting\n");
+    lcdMessage("connecting...");
+  }, 
+  NULL, 
+  NULL
+);
 //-------------------------------
 State state_connected(
-  NULL, //[] { lcdMessage("connected!"); }, 
+  NULL,
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); }, 
   NULL
 );
