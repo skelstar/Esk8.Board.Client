@@ -1,9 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <myPushButton.h>
-// #include <driver/adc.h>
 #include <VescData.h>
-// #include <WiFi.h> // need for powering off wifi
 
 #include <Fsm.h>
 
