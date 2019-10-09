@@ -269,6 +269,7 @@ void lcdConnectingPage(char *message, float ampHours, float odo)
 {
   char avgbuff[8];
   char aHbuff[8];
+  char kmBuff[8];
   float avgAh = ampHours > 0.0 && odo > 0.0
     ? ampHours/odo
     : 0.0;
@@ -278,7 +279,7 @@ void lcdConnectingPage(char *message, float ampHours, float odo)
       /*primary*/ getFloatString(avgbuff, avgAh, 3, 0),
       /*primaryunits*/ "mAh/km",
       /*left*/ getParamFloatString(aHbuff, ampHours, 3, 0, "%sAh"),
-      /*right*/ getParamFloatString(aHbuff, odo, 2, 1, "%skm"));
+      /*right*/ getParamFloatString(kmBuff, odo, 2, 1, "%skm"));
 }
 //--------------------------------------------------------------------------------
 void lcdTripPage(float ampHours, float totalAmpHours, float odo, float totalOdo, bool update)
