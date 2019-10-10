@@ -5,7 +5,9 @@
 
 #include <Fsm.h>
 
-#define SERVER_ADDRESS "80:7d:3a:c5:6a:36"
+#define OTHER_ADDRESS "80:7d:3a:c5:6a:36"
+#define TTGO_T_DISPLAY_SERVER_ADDR "84:0D:8E:3B:91:3E"
+#define SERVER_ADDRESS  TTGO_T_DISPLAY_SERVER_ADDR
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
@@ -69,15 +71,23 @@ enum EventsEnum
 } event;
 
 //-------------------------------
-State state_connecting([]{
-  // lcdMessage("connecting");
-  Serial.printf("state_connecting\n");
-  lcdConnectingPage("connecting", vescdata.ampHours, vescdata.odometer);
-}, NULL, NULL);
+State state_connecting(
+  [] { 
+    lcdConnectingPage("connecting...", vescdata.ampHours, vescdata.odometer);
+  }, 
+  NULL, 
+  NULL
+);
 //-------------------------------
 State state_connected(
-  NULL, //[] { lcdMessage("connected!"); }, 
+  NULL,
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); }, 
+  NULL
+);
+//-------------------------------
+State state_server_disconnected(
+  [] { lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); }, 
+  NULL, 
   NULL
 );
 //-------------------------------
@@ -107,12 +117,6 @@ State state_button_being_held(
 //-------------------------------
 State state_button_held_powerdown_window(
   [] { lcdMessage("power down?"); }, 
-  NULL, 
-  NULL
-);
-//-------------------------------
-State state_server_disconnected(
-  [] { lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); }, 
   NULL, 
   NULL
 );
@@ -174,7 +178,7 @@ void bleDisconnected()
 
 void bleReceivedNotify()
 {
-  Serial.printf("Received: %.1fV %.1fAh %.1fm \n", vescdata.batteryVoltage, vescdata.ampHours, vescdata.odometer);
+  Serial.printf("Received: %.1fV %.1fmAh %.1fm \n", vescdata.batteryVoltage, vescdata.ampHours, vescdata.odometer);
 }
 
 #include "bleClient.h"
