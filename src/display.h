@@ -278,7 +278,7 @@ void lcdConnectingPage(char *message, float ampHours, float odo)
       "connecting...",
       /*primary*/ getFloatString(avgbuff, avgAh, 3, 0),
       /*primaryunits*/ "mAh/km",
-      /*left*/ getParamFloatString(aHbuff, ampHours, 3, 0, "%sAh"),
+      /*left*/ getParamFloatString(aHbuff, ampHours, 3, 0, "%smAh"),
       /*right*/ getParamFloatString(kmBuff, odo, 2, 1, "%skm"));
 }
 //--------------------------------------------------------------------------------
