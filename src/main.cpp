@@ -100,8 +100,8 @@ State state_battery_voltage_screen(
 );
 //-------------------------------
 State state_trip_page(
-  [] { lcdTripPage(vescdata.ampHours, 0.0, vescdata.odometer, 0.0, true); }, 
-  [] { lcdTripPage(vescdata.ampHours, 0.0, vescdata.odometer, 0.0, valueChanged(CHECK_AMP_HOURS)); }, 
+  [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); }, 
+  [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, valueChanged(CHECK_AMP_HOURS)); }, 
   NULL
 );
 //-------------------------------
