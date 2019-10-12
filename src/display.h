@@ -275,25 +275,37 @@ void lcdConnectingPage(char *message, float ampHours, float odo)
     : 0.0;
 
   lcdPrimaryTemplate(
-      "connecting...",
-      /*primary*/ getFloatString(avgbuff, avgAh, 3, 0),
-      /*primaryunits*/ "mAh/km",
-      /*left*/ getParamFloatString(aHbuff, ampHours, 3, 0, "%smAh"),
-      /*right*/ getParamFloatString(kmBuff, odo, 2, 1, "%skm"));
+    "connecting...",
+    /*primary*/ getFloatString(avgbuff, avgAh, 3, 0),
+    /*primaryunits*/ "mAh/km",
+    /*left*/ getParamFloatString(aHbuff, ampHours, 3, 0, "%smAh"),
+    /*right*/ getParamFloatString(kmBuff, odo, 2, 1, "%skm"));
 }
 //--------------------------------------------------------------------------------
-void lcdTripPage(float ampHours, float totalAmpHours, float odo, float totalOdo, bool update)
+void lcdTripPage(float ampHours, float odo, bool vescOnline, bool update)
 {
   if (!update)
   {
     return;
   }
   u8g2.clearBuffer();
-  lcd_medium_float_text(0, FONT_SIZE_MED_LINE_1, "Trip", "%sAh", ampHours);
-  lcd_medium_float_text(0, FONT_SIZE_MED_LINE_2, "Total", "%sAh", totalAmpHours);
-  u8g2.drawHLine(0, 64 / 2, 128);
-  lcd_medium_float_text(0, FONT_SIZE_MED_LINE_3, "Trip", "%skm", odo);
-  lcd_medium_float_text(0, FONT_SIZE_MED_LINE_4, "Total", "%skm", totalOdo);
+  char avgbuff[8];
+  char aHbuff[8];
+  char kmBuff[8];
+  char titleBuff[16];
+  float avgAh = ampHours > 0.0 && odo > 0.0 ? ampHours/odo : 0.0;
+
+  strcpy(titleBuff, vescOnline 
+    // 01234567890123456
+    ? "Trip" 
+    : "VESC OFFLINE!!!");
+
+  lcdPrimaryTemplate(
+    /*title*/ titleBuff,
+    /*primary*/ getFloatString(avgbuff, avgAh, 3, 0),
+    /*primaryunits*/ "mAh/km",
+    /*left*/ getParamFloatString(aHbuff, ampHours, 3, 0, "%smAh"),
+    /*right*/ getParamFloatString(kmBuff, odo, 2, 1, "%skm"));
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
