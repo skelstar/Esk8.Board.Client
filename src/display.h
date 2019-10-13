@@ -236,23 +236,32 @@ void lcd_line_text(uint8_t x, uint8_t y, char *text, bool centered)
   u8g2.drawStr(x, y, text);
 }
 //--------------------------------------------------------------------------------
-void lcdPrimaryTemplate(char *topLine, char *primaryLine, char *primaryUnits, char *bottomLineLeft, char *bottomLineRight)
+void lcdPrimaryTemplate(
+  char *topLine, 
+  char *primaryLine, 
+  char *primaryUnits, 
+  char *bottomLineLeft, 
+  char *bottomLineRight,
+  bool warning)
 {
   u8g2.clearBuffer();
   // top line
+  if (warning) {
+    u8g2.drawBox(0, 0, 128, FONT_SIZE_MED_SMALL_LINE_HEIGHT-1);
+    u8g2.setDrawColor(0);
+  }
   u8g2.setFontPosTop();
   u8g2.setFont(FONT_SIZE_MED_SMALL);
   int width = u8g2.getStrWidth(topLine);
   u8g2.drawStr((128 - width) / 2, 0, topLine);
+  if (warning) {
+    u8g2.setDrawColor(1);
+  }
   // middle line
   uint8_t pixelSize = 6;
   uint8_t spacing = 4;
   width = strlen(primaryLine) * 3 + (strlen(primaryLine) * (spacing-1));
   chunkyDrawFloat(0+width/2, 64/2 - (pixelSize*5)/2, primaryLine, primaryUnits, spacing, pixelSize);
-  // u8g2.setFontPosCenter();
-  // u8g2.setFont(FONT_SIZE_LG);
-  // width = u8g2.getStrWidth(primaryLine);
-  // u8g2.drawStr((128 - width) / 2, 64 / 2, primaryLine);
   // bottom line
   u8g2.setFontPosBottom();
   u8g2.setFont(FONT_SIZE_MED);
@@ -279,7 +288,8 @@ void lcdConnectingPage(char *message, float ampHours, float odo)
     /*primary*/ getFloatString(avgbuff, avgAh, 3, 0),
     /*primaryunits*/ "mAh/km",
     /*left*/ getParamFloatString(aHbuff, ampHours, 3, 0, "%smAh"),
-    /*right*/ getParamFloatString(kmBuff, odo, 2, 1, "%skm"));
+    /*right*/ getParamFloatString(kmBuff, odo, 2, 1, "%skm"),
+    /*warning*/ true);
 }
 //--------------------------------------------------------------------------------
 void lcdTripPage(float ampHours, float odo, bool vescOnline, bool update)
@@ -305,7 +315,8 @@ void lcdTripPage(float ampHours, float odo, bool vescOnline, bool update)
     /*primary*/ getFloatString(avgbuff, avgAh, 3, 0),
     /*primaryunits*/ "mAh/km",
     /*left*/ getParamFloatString(aHbuff, ampHours, 3, 0, "%smAh"),
-    /*right*/ getParamFloatString(kmBuff, odo, 2, 1, "%skm"));
+    /*right*/ getParamFloatString(kmBuff, odo, 2, 1, "%skm"),
+    /*warning*/ vescOnline == false);
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
