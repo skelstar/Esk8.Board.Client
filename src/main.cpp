@@ -8,7 +8,8 @@
 #define ESP32_MINI "80:7D:3A:C5:6A:36"
 #define TTGO_T_DISPLAY_SERVER_ADDR "84:0D:8E:3B:91:3E"
 #define TTGO_ESP32_OLED_V2_0 "80:7D:3A:B9:A8:6A"
-#define SERVER_ADDRESS  ESP32_MINI
+#define ESP32_MINI_B "80:7D:3A:C4:50:9A"
+#define SERVER_ADDRESS  ESP32_MINI_B
 
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -140,6 +141,7 @@ void addFsmTransitions() {
   event = BUTTON_CLICK;
   fsm.add_transition(&state_battery_voltage_screen, &state_trip_page, event, NULL);
   fsm.add_transition(&state_trip_page, &state_battery_voltage_screen, event, NULL);
+  fsm.add_transition(&state_button_being_held, &state_trip_page, event, NULL);
 
   event = MOVING;
   fsm.add_transition(&state_trip_page, &state_moving_screen, event, NULL);
@@ -158,9 +160,6 @@ void addFsmTransitions() {
   event = HELD_CLEAR_TRIP_WINDOW;
 
   event = SENT_CLEAR_TRIP_ODO;
-
-  event = BUTTON_CLICK;
-  fsm.add_transition(&state_button_being_held, &state_trip_page, event, NULL);
 }
 /* ---------------------------------------------- */
 
@@ -190,7 +189,7 @@ void bleReceivedNotify()
 #define LedPin 19
 #define IrPin 17
 #define BuzzerPin 26
-#define BtnPin 35
+#define BtnPin 0
 /* ---------------------------------------------- */
 
 #define OFFSTATE HIGH
