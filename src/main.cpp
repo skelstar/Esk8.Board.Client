@@ -21,10 +21,10 @@
 #define LED_ON HIGH
 #define LED_OFF LOW
 
-#define LedPin 19
-#define IrPin 17
-#define BuzzerPin 26
-#define BtnPin 0
+#define STICK_LED_PIN     19
+#define STICK_IR_PIN      17
+#define STICK_BUZZER_PIN  26
+#define STICK_BUTTON_PIN  35
 
 /* ---------------------------------------------- */
 
@@ -203,7 +203,7 @@ void buzzerBuzz();
 void setupPeripherals();
 
 void listener_Button(int eventCode, int eventPin, int eventParam);
-myPushButton button(BtnPin, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
+myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
   {
     bool sleepTimeWindow = eventParam >= 2 && eventParam <= 3;
     // bool clearTripWindow = eventParam >= 4 && eventParam <= 5;
@@ -259,20 +259,20 @@ void buzzerBuzz()
 {
   for (int i = 0; i < 100; i++)
   {
-    digitalWrite(BuzzerPin, HIGH);
+    digitalWrite(STICK_BUZZER_PIN, HIGH);
     delay(1);
-    digitalWrite(BuzzerPin, LOW);
+    digitalWrite(STICK_BUZZER_PIN, LOW);
     delay(1);
   }
 }
 
 void setupPeripherals()
 {
-  pinMode(LedPin, OUTPUT);
-  pinMode(IrPin, OUTPUT);
-  pinMode(BuzzerPin, OUTPUT);
-  digitalWrite(LedPin, LED_ON);
-  digitalWrite(BuzzerPin, LOW);
+  pinMode(STICK_LED_PIN, OUTPUT);
+  pinMode(STICK_IR_PIN, OUTPUT);
+  pinMode(STICK_BUZZER_PIN, OUTPUT);
+  digitalWrite(STICK_LED_PIN, LED_ON);
+  digitalWrite(STICK_BUZZER_PIN, LOW);
   u8g2.setFont(u8g2_font_4x6_tr);
 }
 
@@ -333,6 +333,8 @@ void setup()
   button.serviceEvents();
 }
 
+BaseType_t xStatus;
+
 void loop()
 {
   button.serviceEvents();
@@ -341,6 +343,21 @@ void loop()
 
   fsm.run_machine();
 
-  delay(100);
+  EventsEnum e;
+  xStatus = xQueueReceive(xQueue, &e, xTicksToWait);
+  if (xStatus == pdPASS)
+  {
+    switch (e)
+    {
+    case SERVER_CONNECTED:
+    case SERVER_DISCONNECTED:
+      fsm.trigger(e);
+      break;
+    default:
+      Serial.printf("Unhandled event code: %d \n", e);
+    }
+  }
+
+  delay(10);
 }
 
