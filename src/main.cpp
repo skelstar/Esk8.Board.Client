@@ -14,12 +14,17 @@
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
-#define BATTERY_VOLTAGE_FULL          4.2 * 11   // 46.2
-#define BATTERY_VOLTAGE_CUTOFF_START  3.4 * 11 // 37.4
-#define BATTERY_VOLTAGE_CUTOFF_END    3.1 * 11 //34.1
+#define BATTERY_VOLTAGE_FULL          4.2 * 11      // 46.2
+#define BATTERY_VOLTAGE_CUTOFF_START  3.4 * 11      // 37.4
+#define BATTERY_VOLTAGE_CUTOFF_END    3.1 * 11      // 34.1
 
 #define LED_ON HIGH
 #define LED_OFF LOW
+
+#define STICK_LED_PIN     19
+#define STICK_IR_PIN      17
+#define STICK_BUZZER_PIN  26
+#define STICK_BUTTON_PIN  35
 
 /* ---------------------------------------------- */
 
@@ -56,8 +61,13 @@ bool valueChanged(uint8_t measure) {
   return false;
 }
 
-#include "utils.h"
+
+xQueueHandle xQueue;
+const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+#define OTHER_CORE 0
+
 #include "display.h"
+#include "utils.h"
 
 enum EventsEnum
 {
@@ -183,13 +193,6 @@ void bleReceivedNotify()
 }
 
 #include "bleClient.h"
-
-/* ---------------------------------------------- */
-
-#define LedPin 19
-#define IrPin 17
-#define BuzzerPin 26
-#define BtnPin 0
 /* ---------------------------------------------- */
 
 #define OFFSTATE HIGH
@@ -198,11 +201,9 @@ void sendClearTripOdoToMonitor();
 void checkBoardMoving();
 void buzzerBuzz();
 void setupPeripherals();
-void deepSleep();
-void pureDeepSleep();
 
 void listener_Button(int eventCode, int eventPin, int eventParam);
-myPushButton button(BtnPin, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
+myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
   {
     bool sleepTimeWindow = eventParam >= 2 && eventParam <= 3;
     // bool clearTripWindow = eventParam >= 4 && eventParam <= 5;
@@ -258,31 +259,21 @@ void buzzerBuzz()
 {
   for (int i = 0; i < 100; i++)
   {
-    digitalWrite(BuzzerPin, HIGH);
+    digitalWrite(STICK_BUZZER_PIN, HIGH);
     delay(1);
-    digitalWrite(BuzzerPin, LOW);
+    digitalWrite(STICK_BUZZER_PIN, LOW);
     delay(1);
   }
 }
 
 void setupPeripherals()
 {
-  pinMode(LedPin, OUTPUT);
-  pinMode(IrPin, OUTPUT);
-  pinMode(BuzzerPin, OUTPUT);
-  digitalWrite(LedPin, LED_ON);
-  digitalWrite(BuzzerPin, LOW);
+  pinMode(STICK_LED_PIN, OUTPUT);
+  pinMode(STICK_IR_PIN, OUTPUT);
+  pinMode(STICK_BUZZER_PIN, OUTPUT);
+  digitalWrite(STICK_LED_PIN, LED_ON);
+  digitalWrite(STICK_BUZZER_PIN, LOW);
   u8g2.setFont(u8g2_font_4x6_tr);
-}
-
-void deepSleep()
-{
-  // WiFi.mode(WIFI_OFF);  // wifi
-  btStop();           // ble
-  digitalWrite(LedPin, LED_OFF);
-  u8g2.setPowerSave(1);
-  delay(500);
-  pureDeepSleep();
 }
 
 #define CLEAR_TRIP_ODO_COMMAND 99
@@ -295,23 +286,25 @@ void sendClearTripOdoToMonitor()
   fsm.trigger(SENT_CLEAR_TRIP_ODO);
 }
 
-void pureDeepSleep()
-{
-  // https://esp32.com/viewtopic.php?t=3083
-  // esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+/*------------------------------------------------------------------*/ 
 
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-  //   IMU.setSleepEnabled(true);
-  delay(100);
-  //adc_power_off();
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_35, LOW); //1 = High, 0 = Low
-  esp_deep_sleep_start();
-  Serial.println("This will never be printed");
+void coreTask( void * pvParameters ){
+ 
+  Serial.printf("coreTask running on Core %d\n", xPortGetCoreID());
+
+  while(true){
+    if (serverConnected == false)
+    {
+      Serial.printf("Trying to connect to server\n");
+      serverConnected = bleConnectToServer();
+      Serial.printf("connected? %d\n", serverConnected);
+    }
+    vTaskDelay(1);
+  }
+  vTaskDelete( NULL );
 }
 
+/*------------------------------------------------------------------*/ 
 void setup()
 {
   Wire.begin(21, 22, 100000);
@@ -325,6 +318,11 @@ void setup()
 
   setupPeripherals();
 
+  
+  xTaskCreatePinnedToCore(coreTask, "coreTask", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
+  
+  xQueue = xQueueCreate(1, sizeof(EventsEnum));
+
   // if button held then we can shut down
   button.serviceEvents();
   while (button.isPressed())
@@ -335,19 +333,31 @@ void setup()
   button.serviceEvents();
 }
 
+BaseType_t xStatus;
+
 void loop()
 {
   button.serviceEvents();
-
-  if (serverConnected == false)
-  {
-    serverConnected = bleConnectToServer();
-  }
 
   checkBoardMoving();
 
   fsm.run_machine();
 
-  delay(100);
+  EventsEnum e;
+  xStatus = xQueueReceive(xQueue, &e, xTicksToWait);
+  if (xStatus == pdPASS)
+  {
+    switch (e)
+    {
+    case SERVER_CONNECTED:
+    case SERVER_DISCONNECTED:
+      fsm.trigger(e);
+      break;
+    default:
+      Serial.printf("Unhandled event code: %d \n", e);
+    }
+  }
+
+  delay(10);
 }
 
