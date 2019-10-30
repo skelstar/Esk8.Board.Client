@@ -6,11 +6,9 @@ enum EventsEnum
   SERVER_DISCONNECTED,
   MOVING,
   STOPPED_MOVING,
-  HELD_POWERDOWN_WINDOW,
-  HELD_CLEAR_TRIP_WINDOW,
-  BUTTON_BEING_HELD,
-  SENT_CLEAR_TRIP_ODO,
-  HELD_RELEASED
+  EV_HELD_DOWN_WAIT,
+  EV_HELD_POWER_OFF_OPTION,
+  EV_NO_HELD_OPTION_SELECTED,
 } event;
 
 //-------------------------------
@@ -52,13 +50,13 @@ State state_moving_screen(
   NULL
 );
 //-------------------------------
-State state_button_being_held(
-  [] { lcdMessage("..."); Serial.printf("state_button_being_held\n"); }, 
+State state_button_held_wait(
+  [] { lcdMessage("..."); Serial.printf("state_button_held_wait\n"); }, 
   NULL, 
   NULL
 );
 //-------------------------------
-State state_button_held_powerdown_window(
+State state_button_held_powerdown_option(
   [] { lcdMessage("power down?"); }, 
   NULL, 
   NULL
@@ -82,7 +80,7 @@ void addFsmTransitions() {
   fsm.add_transition(&state_trip_page, &state_battery_voltage_screen, event, NULL);
   // if going to batt screen, go back to trip page after 2 seconds
   fsm.add_timed_transition(&state_battery_voltage_screen, &state_trip_page, 2000, NULL);
-  fsm.add_transition(&state_button_being_held, &state_trip_page, event, NULL);
+  fsm.add_transition(&state_button_held_wait, &state_trip_page, event, NULL);
 
   event = MOVING;
   fsm.add_transition(&state_trip_page, &state_moving_screen, event, NULL);
@@ -90,16 +88,16 @@ void addFsmTransitions() {
   event = STOPPED_MOVING;
   fsm.add_transition(&state_moving_screen, &state_trip_page, event, NULL);
 
-  event = BUTTON_BEING_HELD;
-  fsm.add_transition(&state_connecting, &state_button_being_held, event, NULL);
-  fsm.add_transition(&state_battery_voltage_screen, &state_button_being_held, event, NULL);
-  fsm.add_transition(&state_trip_page, &state_button_being_held, event, NULL);
+  event = EV_HELD_DOWN_WAIT;
+  fsm.add_transition(&state_connecting, &state_button_held_wait, event, NULL);
+  fsm.add_transition(&state_battery_voltage_screen, &state_button_held_wait, event, NULL);
+  fsm.add_transition(&state_trip_page, &state_button_held_wait, event, NULL);
+  fsm.add_transition(&state_button_held_powerdown_option, &state_button_held_wait, event, NULL);
 
-  event = HELD_POWERDOWN_WINDOW;
-  fsm.add_transition(&state_button_being_held, &state_button_held_powerdown_window, event, NULL);
+  event = EV_HELD_POWER_OFF_OPTION;
+  fsm.add_transition(&state_button_held_wait, &state_button_held_powerdown_option, event, NULL);
 
-  event = HELD_CLEAR_TRIP_WINDOW;
-
-  event = SENT_CLEAR_TRIP_ODO;
+  event = EV_NO_HELD_OPTION_SELECTED;  // no option selected
+  fsm.add_transition(&state_button_held_wait, &state_trip_page, event, NULL);
 }
 /* ---------------------------------------------- */

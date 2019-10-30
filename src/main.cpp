@@ -102,8 +102,7 @@ void setupPeripherals();
 void listener_Button(int eventCode, int eventPin, int eventParam);
 myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
   {
-    bool sleepTimeWindow = eventParam >= 2 && eventParam <= 3;
-    // bool clearTripWindow = eventParam >= 4 && eventParam <= 5;
+    const int powerDownOption = 2;
 
     switch (eventCode)
     {
@@ -111,26 +110,30 @@ myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int ev
         break;
  
       case button.EV_HELD_SECONDS:
-        if (sleepTimeWindow)
-        {
-          fsm.trigger(HELD_POWERDOWN_WINDOW);
-        }
-        else
-        {
-          fsm.trigger(BUTTON_BEING_HELD);
+        switch (eventParam) {
+          case powerDownOption:   // power down
+            fsm.trigger(EV_HELD_POWER_OFF_OPTION);
+            break;
+          default:
+            fsm.trigger(EV_HELD_DOWN_WAIT);
+            break;
         }
         break;
 
       case button.EV_RELEASED:
-        if (sleepTimeWindow)
-        {
-          deepSleep();
-          break;
-        }
-        else
-        {
-          fsm.trigger(BUTTON_CLICK);
-        }
+        switch (eventParam) {
+          case powerDownOption:
+            deepSleep();
+            break;
+          default:
+            if (eventParam < 1) {
+              fsm.trigger(BUTTON_CLICK);
+            }
+            else {
+              fsm.trigger(EV_NO_HELD_OPTION_SELECTED);
+            }
+            break;
+          }
         break;
       case button.EV_DOUBLETAP:
         break;
@@ -171,16 +174,6 @@ void setupPeripherals()
   digitalWrite(STICK_LED_PIN, LED_ON);
   digitalWrite(STICK_BUZZER_PIN, LOW);
   u8g2.setFont(u8g2_font_4x6_tr);
-}
-
-#define CLEAR_TRIP_ODO_COMMAND 99
-
-void sendClearTripOdoToMonitor()
-{
-  Serial.printf("sending clear trip odo command to master\n");
-  pRemoteCharacteristic->writeValue(CLEAR_TRIP_ODO_COMMAND, sizeof(uint8_t));
-  buzzerBuzz();
-  fsm.trigger(SENT_CLEAR_TRIP_ODO);
 }
 /*------------------------------------------------------------------*/ 
 void setup()
