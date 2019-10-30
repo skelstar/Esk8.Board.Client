@@ -182,25 +182,6 @@ void sendClearTripOdoToMonitor()
   buzzerBuzz();
   fsm.trigger(SENT_CLEAR_TRIP_ODO);
 }
-
-/*------------------------------------------------------------------*/ 
-
-void coreTask( void * pvParameters ){
- 
-  Serial.printf("coreTask running on Core %d\n", xPortGetCoreID());
-
-  while(true){
-    if (serverConnected == false)
-    {
-      Serial.printf("Trying to connect to server\n");
-      serverConnected = bleConnectToServer();
-      Serial.printf("connected? %d\n", serverConnected);
-    }
-    vTaskDelay(1);
-  }
-  vTaskDelete( NULL );
-}
-
 /*------------------------------------------------------------------*/ 
 void setup()
 {
@@ -214,11 +195,6 @@ void setup()
   fsm.run_machine();
 
   setupPeripherals();
-
-  
-  xTaskCreatePinnedToCore(coreTask, "coreTask", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
-  
-  xQueue = xQueueCreate(1, sizeof(EventsEnum));
 
   // if button held then we can shut down
   button.serviceEvents();
@@ -240,19 +216,10 @@ void loop()
 
   fsm.run_machine();
 
-  EventsEnum e;
-  xStatus = xQueueReceive(xQueue, &e, xTicksToWait);
-  if (xStatus == pdPASS)
+  if (serverConnected == false)
   {
-    switch (e)
-    {
-    case SERVER_CONNECTED:
-    case SERVER_DISCONNECTED:
-      fsm.trigger(e);
-      break;
-    default:
-      Serial.printf("Unhandled event code: %d \n", e);
-    }
+    Serial.printf("Trying to connect to server\n");
+    serverConnected = bleConnectToServer();
   }
 
   delay(10);
