@@ -41,3 +41,37 @@ void deepSleep()
   delay(500);
   pureDeepSleep();
 }
+
+void configModeCallback (WiFiManager *myWiFiManager) {
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
+  Serial.println(myWiFiManager->getConfigPortalSSID());
+}
+
+bool connectToWifi() {
+  WiFiManager wifiManager;
+  //reset saved settings
+  //wifiManager.resetSettings();
+
+  //set custom ip for portal
+  wifiManager.setAPStaticIPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255,255,255,0));
+
+  //fetches ssid and pass from eeprom and tries to connect
+  //if it does not connect it starts an access point with the specified name
+  //here  "AutoConnectAP"
+  //and goes into a blocking loop awaiting configuration'
+
+  wifiManager.setAPCallback(configModeCallback);
+  wifiManager.autoConnect("esk8.board");
+
+  // if (!wifiManager.startConfigPortal("esk8.board")) {
+  //     Serial.println("failed to connect and hit timeout");
+  //     delay(5000);
+  //     //reset and try again, or maybe put it to deep sleep
+  //     ESP.restart();
+  //     delay(5000);
+  //   }
+  // wifiManager.autoConnect("esk8.board");
+  //or use this for auto generated name ESP + ChipID
+  //wifiManager.autoConnect();
+  }

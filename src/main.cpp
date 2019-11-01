@@ -90,7 +90,7 @@ void bleDisconnected()
 
 void bleReceivedNotify()
 {
-  Serial.printf("Received: %.1fV %.1fmAh %.1fm \n", vescdata.batteryVoltage, vescdata.ampHours, vescdata.odometer);
+  // Serial.printf("Received: %.1fV %.1fmAh %.1fm \n", vescdata.batteryVoltage, vescdata.ampHours, vescdata.odometer);
 }
 
 #include "bleClient.h"
@@ -107,6 +107,7 @@ void listener_Button(int eventCode, int eventPin, int eventParam);
 myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
   {
     const int powerDownOption = 2;
+    const int connectToWifiOption = 3;
 
     switch (eventCode)
     {
@@ -118,6 +119,9 @@ myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int ev
           case powerDownOption:   // power down
             fsm.trigger(EV_HELD_POWER_OFF_OPTION);
             break;
+          case connectToWifiOption:
+            fsm.trigger(EV_HELD_WIFI_OPTION);
+            break;
           default:
             fsm.trigger(EV_HELD_DOWN_WAIT);
             break;
@@ -128,6 +132,9 @@ myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int ev
         switch (eventParam) {
           case powerDownOption:
             deepSleep();
+            break;
+          case connectToWifiOption:
+            connectToWifi();
             break;
           default:
             if (eventParam < 1) {
@@ -201,28 +208,6 @@ void setup()
     button.serviceEvents();
   }
   button.serviceEvents();
-
-  WiFiManager wifiManager;
-  //reset saved settings
-  wifiManager.resetSettings();
-
-  //set custom ip for portal
-  wifiManager.setAPStaticIPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255,255,255,0));
-
-  //fetches ssid and pass from eeprom and tries to connect
-  //if it does not connect it starts an access point with the specified name
-  //here  "AutoConnectAP"
-  //and goes into a blocking loop awaiting configuration
-  if (!wifiManager.startConfigPortal("esk8.board")) {
-      Serial.println("failed to connect and hit timeout");
-      delay(3000);
-      //reset and try again, or maybe put it to deep sleep
-      ESP.restart();
-      delay(5000);
-    }
-  // wifiManager.autoConnect("esk8.board");
-  //or use this for auto generated name ESP + ChipID
-  //wifiManager.autoConnect();
 }
 
 BaseType_t xStatus;

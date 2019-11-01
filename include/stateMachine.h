@@ -8,6 +8,7 @@ enum EventsEnum
   STOPPED_MOVING,
   EV_HELD_DOWN_WAIT,
   EV_HELD_POWER_OFF_OPTION,
+  EV_HELD_WIFI_OPTION,
   EV_NO_HELD_OPTION_SELECTED,
 } event;
 
@@ -62,6 +63,12 @@ State state_button_held_powerdown_option(
   NULL
 );
 //-------------------------------
+State state_button_held_wifi_option(
+  [] { lcdMessage("wifi?"); },
+  NULL,
+  NULL
+);
+//-------------------------------
 
 Fsm fsm(&state_connecting);
 
@@ -92,10 +99,13 @@ void addFsmTransitions() {
   fsm.add_transition(&state_connecting, &state_button_held_wait, event, NULL);
   fsm.add_transition(&state_battery_voltage_screen, &state_button_held_wait, event, NULL);
   fsm.add_transition(&state_trip_page, &state_button_held_wait, event, NULL);
-  fsm.add_transition(&state_button_held_powerdown_option, &state_button_held_wait, event, NULL);
+  fsm.add_transition(&state_button_held_wifi_option, &state_button_held_wait, event, NULL);
 
   event = EV_HELD_POWER_OFF_OPTION;
   fsm.add_transition(&state_button_held_wait, &state_button_held_powerdown_option, event, NULL);
+
+  event = EV_HELD_WIFI_OPTION;
+  fsm.add_transition(&state_button_held_powerdown_option, &state_button_held_wifi_option, event, NULL);
 
   event = EV_NO_HELD_OPTION_SELECTED;  // no option selected
   fsm.add_transition(&state_button_held_wait, &state_trip_page, event, NULL);
