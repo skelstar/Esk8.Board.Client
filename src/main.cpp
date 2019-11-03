@@ -9,17 +9,23 @@
 #define TTGO_T_DISPLAY_SERVER_ADDR "84:0D:8E:3B:91:3E"
 #define TTGO_ESP32_OLED_V2_0 "80:7D:3A:B9:A8:6A"
 #define ESP32_MINI_B "80:7D:3A:C4:50:9A"
-#define SERVER_ADDRESS  ESP32_MINI_B
+#define ESP32_MINI_C "3C:71:BF:F0:C5:4A"
+#define SERVER_ADDRESS  ESP32_MINI_C
 
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
-#define BATTERY_VOLTAGE_FULL          4.2 * 11   // 46.2
-#define BATTERY_VOLTAGE_CUTOFF_START  3.4 * 11 // 37.4
-#define BATTERY_VOLTAGE_CUTOFF_END    3.1 * 11 //34.1
+#define BATTERY_VOLTAGE_FULL          4.2 * 11      // 46.2
+#define BATTERY_VOLTAGE_CUTOFF_START  3.4 * 11      // 37.4
+#define BATTERY_VOLTAGE_CUTOFF_END    3.1 * 11      // 34.1
 
 #define LED_ON HIGH
 #define LED_OFF LOW
+
+#define STICK_LED_PIN     19
+#define STICK_IR_PIN      17
+#define STICK_BUZZER_PIN  26
+#define STICK_BUTTON_PIN  35
 
 /* ---------------------------------------------- */
 
@@ -56,112 +62,14 @@ bool valueChanged(uint8_t measure) {
   return false;
 }
 
-#include "utils.h"
+
+xQueueHandle xQueue;
+const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+#define OTHER_CORE 0
+
 #include "display.h"
-
-enum EventsEnum
-{
-  BUTTON_CLICK,
-  SERVER_CONNECTED,
-  SERVER_DISCONNECTED,
-  MOVING,
-  STOPPED_MOVING,
-  HELD_POWERDOWN_WINDOW,
-  HELD_CLEAR_TRIP_WINDOW,
-  BUTTON_BEING_HELD,
-  SENT_CLEAR_TRIP_ODO,
-  HELD_RELEASED
-} event;
-
-//-------------------------------
-State state_connecting(
-  [] { 
-    lcdConnectingPage("connecting...", vescdata.ampHours, vescdata.odometer);
-  }, 
-  NULL, 
-  NULL
-);
-//-------------------------------
-State state_connected(
-  NULL,
-  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); }, 
-  NULL
-);
-//-------------------------------
-State state_server_disconnected(
-  [] { lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); }, 
-  NULL, 
-  NULL
-);
-//-------------------------------
-State state_battery_voltage_screen(
-  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); },
-  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); },
-  NULL
-);
-//-------------------------------
-State state_trip_page(
-  [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); }, 
-  [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, valueChanged(CHECK_AMP_HOURS)); }, 
-  NULL
-);
-//-------------------------------
-State state_moving_screen(
-  [] { clearScreen(); }, 
-  NULL, 
-  NULL
-);
-//-------------------------------
-State state_button_being_held(
-  [] { lcdMessage("..."); Serial.printf("state_button_being_held\n"); }, 
-  NULL, 
-  NULL
-);
-//-------------------------------
-State state_button_held_powerdown_window(
-  [] { lcdMessage("power down?"); }, 
-  NULL, 
-  NULL
-);
-//-------------------------------
-
-Fsm fsm(&state_connecting);
-
-void addFsmTransitions() {
-
-  uint8_t event = SERVER_DISCONNECTED;
-  fsm.add_transition(&state_battery_voltage_screen, &state_server_disconnected, event, NULL);
-  fsm.add_transition(&state_trip_page, &state_server_disconnected, event, NULL);
-
-  event = SERVER_CONNECTED;
-  fsm.add_transition(&state_connecting, &state_connected, event, NULL);
-  // when state connected is entered it will transition to new state after 3 seconds
-  fsm.add_timed_transition(&state_connected, &state_trip_page, 3000, NULL);
-
-  event = BUTTON_CLICK;
-  fsm.add_transition(&state_battery_voltage_screen, &state_trip_page, event, NULL);
-  fsm.add_transition(&state_trip_page, &state_battery_voltage_screen, event, NULL);
-  fsm.add_transition(&state_button_being_held, &state_trip_page, event, NULL);
-
-  event = MOVING;
-  fsm.add_transition(&state_trip_page, &state_moving_screen, event, NULL);
-
-  event = STOPPED_MOVING;
-  fsm.add_transition(&state_moving_screen, &state_trip_page, event, NULL);
-
-  event = BUTTON_BEING_HELD;
-  fsm.add_transition(&state_connecting, &state_button_being_held, event, NULL);
-  fsm.add_transition(&state_battery_voltage_screen, &state_button_being_held, event, NULL);
-  fsm.add_transition(&state_trip_page, &state_button_being_held, event, NULL);
-
-  event = HELD_POWERDOWN_WINDOW;
-  fsm.add_transition(&state_button_being_held, &state_button_held_powerdown_window, event, NULL);
-
-  event = HELD_CLEAR_TRIP_WINDOW;
-
-  event = SENT_CLEAR_TRIP_ODO;
-}
-/* ---------------------------------------------- */
+#include "utils.h"
+#include "stateMachine.h"
 
 void bleConnected()
 {
@@ -183,13 +91,6 @@ void bleReceivedNotify()
 }
 
 #include "bleClient.h"
-
-/* ---------------------------------------------- */
-
-#define LedPin 19
-#define IrPin 17
-#define BuzzerPin 26
-#define BtnPin 0
 /* ---------------------------------------------- */
 
 #define OFFSTATE HIGH
@@ -198,14 +99,11 @@ void sendClearTripOdoToMonitor();
 void checkBoardMoving();
 void buzzerBuzz();
 void setupPeripherals();
-void deepSleep();
-void pureDeepSleep();
 
 void listener_Button(int eventCode, int eventPin, int eventParam);
-myPushButton button(BtnPin, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
+myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
   {
-    bool sleepTimeWindow = eventParam >= 2 && eventParam <= 3;
-    // bool clearTripWindow = eventParam >= 4 && eventParam <= 5;
+    const int powerDownOption = 2;
 
     switch (eventCode)
     {
@@ -213,26 +111,30 @@ myPushButton button(BtnPin, PULLUP, OFFSTATE, [](int eventCode, int eventPin, in
         break;
  
       case button.EV_HELD_SECONDS:
-        if (sleepTimeWindow)
-        {
-          fsm.trigger(HELD_POWERDOWN_WINDOW);
-        }
-        else
-        {
-          fsm.trigger(BUTTON_BEING_HELD);
+        switch (eventParam) {
+          case powerDownOption:   // power down
+            fsm.trigger(EV_HELD_POWER_OFF_OPTION);
+            break;
+          default:
+            fsm.trigger(EV_HELD_DOWN_WAIT);
+            break;
         }
         break;
 
       case button.EV_RELEASED:
-        if (sleepTimeWindow)
-        {
-          deepSleep();
-          break;
-        }
-        else
-        {
-          fsm.trigger(BUTTON_CLICK);
-        }
+        switch (eventParam) {
+          case powerDownOption:
+            deepSleep();
+            break;
+          default:
+            if (eventParam < 1) {
+              fsm.trigger(BUTTON_CLICK);
+            }
+            else {
+              fsm.trigger(EV_NO_HELD_OPTION_SELECTED);
+            }
+            break;
+          }
         break;
       case button.EV_DOUBLETAP:
         break;
@@ -258,60 +160,23 @@ void buzzerBuzz()
 {
   for (int i = 0; i < 100; i++)
   {
-    digitalWrite(BuzzerPin, HIGH);
+    digitalWrite(STICK_BUZZER_PIN, HIGH);
     delay(1);
-    digitalWrite(BuzzerPin, LOW);
+    digitalWrite(STICK_BUZZER_PIN, LOW);
     delay(1);
   }
 }
 
 void setupPeripherals()
 {
-  pinMode(LedPin, OUTPUT);
-  pinMode(IrPin, OUTPUT);
-  pinMode(BuzzerPin, OUTPUT);
-  digitalWrite(LedPin, LED_ON);
-  digitalWrite(BuzzerPin, LOW);
+  pinMode(STICK_LED_PIN, OUTPUT);
+  pinMode(STICK_IR_PIN, OUTPUT);
+  pinMode(STICK_BUZZER_PIN, OUTPUT);
+  digitalWrite(STICK_LED_PIN, LED_ON);
+  digitalWrite(STICK_BUZZER_PIN, LOW);
   u8g2.setFont(u8g2_font_4x6_tr);
 }
-
-void deepSleep()
-{
-  // WiFi.mode(WIFI_OFF);  // wifi
-  btStop();           // ble
-  digitalWrite(LedPin, LED_OFF);
-  u8g2.setPowerSave(1);
-  delay(500);
-  pureDeepSleep();
-}
-
-#define CLEAR_TRIP_ODO_COMMAND 99
-
-void sendClearTripOdoToMonitor()
-{
-  Serial.printf("sending clear trip odo command to master\n");
-  pRemoteCharacteristic->writeValue(CLEAR_TRIP_ODO_COMMAND, sizeof(uint8_t));
-  buzzerBuzz();
-  fsm.trigger(SENT_CLEAR_TRIP_ODO);
-}
-
-void pureDeepSleep()
-{
-  // https://esp32.com/viewtopic.php?t=3083
-  // esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
-
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-  //   IMU.setSleepEnabled(true);
-  delay(100);
-  //adc_power_off();
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_35, LOW); //1 = High, 0 = Low
-  esp_deep_sleep_start();
-  Serial.println("This will never be printed");
-}
-
+/*------------------------------------------------------------------*/ 
 void setup()
 {
   Wire.begin(21, 22, 100000);
@@ -335,19 +200,22 @@ void setup()
   button.serviceEvents();
 }
 
+BaseType_t xStatus;
+
 void loop()
 {
   button.serviceEvents();
-
-  if (serverConnected == false)
-  {
-    serverConnected = bleConnectToServer();
-  }
 
   checkBoardMoving();
 
   fsm.run_machine();
 
-  delay(100);
+  if (serverConnected == false)
+  {
+    Serial.printf("Trying to connect to server\n");
+    serverConnected = bleConnectToServer();
+  }
+
+  delay(10);
 }
 
