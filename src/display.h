@@ -1,7 +1,14 @@
 #include <U8g2lib.h>
 
 //https://github.com/olikraus/u8g2/wiki/fntgrpiconic#open_iconic_arrow_2x2
-U8G2_SH1107_64X128_F_4W_HW_SPI u8g2(U8G2_R3, /* cs=*/14, /* dc=*/27, /* reset=*/33);
+
+#define OLED_SDA  4
+#define OLED_SCL  15
+#define OLED_RST  16
+
+// https://www.aliexpress.com/item/32824839148.html?spm=a2g0o.home.01008.3.650c3b27e1S8sM
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, OLED_RST, OLED_SCL, OLED_SDA);
+// U8G2_SH1107_64X128_F_4W_HW_SPI u8g2(U8G2_R3, /* cs=*/14, /* dc=*/27, /* reset=*/33);
 
 // u8g2.setFont(u8g2_font_tenfatguys_tf);
 // u8g2.setFont(u8g2_font_tenthinguys_tf);
@@ -13,15 +20,16 @@ U8G2_SH1107_64X128_F_4W_HW_SPI u8g2(U8G2_R3, /* cs=*/14, /* dc=*/27, /* reset=*/
 // u8g2_font_profont17_tr
 // u8g2_font_profont22_tr
 // u8g2_font_profont29_tr
+
 #define FONT_SIZE_XSMALL u8g2_font_profont10_tr
-
 #define FONT_SIZE_SMALL u8g2_font_profont12_tr
-
 #define FONT_SIZE_MED_SMALL u8g2_font_profont15_tr
-#define FONT_SIZE_MED_SMALL_LINE_HEIGHT 15
-
 #define FONT_SIZE_MED u8g2_font_profont17_tr
+#define FONT_SIZE_LG u8g2_font_profont29_tr
+
+#define FONT_SIZE_MED_SMALL_LINE_HEIGHT 15
 #define FONT_SIZE_MED_LINE_HEIGHT 17
+
 #define FONT_SIZE_MED_LINE_1 0
 #define FONT_SIZE_MED_LINE_2 FONT_SIZE_MED_LINE_HEIGHT
 #define FONT_SIZE_MED_LINE_3 FONT_SIZE_MED_LINE_HEIGHT * 2
@@ -30,7 +38,6 @@ U8G2_SH1107_64X128_F_4W_HW_SPI u8g2(U8G2_R3, /* cs=*/14, /* dc=*/27, /* reset=*/
 #define BETWEEN_LINE1_AND_LINE2 64 / 4
 #define BETWEEN_LINE2_AND_LINE3 (64 / 4) * 2
 
-#define FONT_SIZE_LG u8g2_font_profont29_tr
 #define FONT_SIZE_LG_LINE_HEIGHT 29
 #define FONT_SIZE_LG_ALL (64 / 2) - FONT_SIZE_LG_LINE_HEIGHT / 2
 #define FONT_SIZE_LG_LINE_1 0
