@@ -2,7 +2,6 @@
 #include <Wire.h>
 #include <myPushButton.h>
 #include <VescData.h>
-
 #include <Fsm.h>
 
 #define ESP32_MINI "80:7D:3A:C5:6A:36"
@@ -18,15 +17,6 @@
 #define BATTERY_VOLTAGE_FULL          4.2 * 11      // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START  3.4 * 11      // 37.4
 #define BATTERY_VOLTAGE_CUTOFF_END    3.1 * 11      // 34.1
-
-#define LED_ON HIGH
-#define LED_OFF LOW
-
-#define STICK_LED_PIN     19
-#define STICK_IR_PIN      17
-#define STICK_BUZZER_PIN  26
-#define STICK_BUTTON_PIN  35
-
 /* ---------------------------------------------- */
 
 static boolean serverConnected = false;
@@ -39,6 +29,8 @@ static boolean serverConnected = false;
 #define CHECK_BATT_VOLTS  1
 #define CHECK_AMP_HOURS   2
 #define CHECK_MOTOR_CURRENT 3
+
+#define BUTTON_PIN    0
 
 VescData vescdata, oldvescdata;
 
@@ -61,11 +53,6 @@ bool valueChanged(uint8_t measure) {
   }
   return false;
 }
-
-
-xQueueHandle xQueue;
-const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
-#define OTHER_CORE 0
 
 #include "display.h"
 #include "utils.h"
@@ -97,23 +84,17 @@ void bleReceivedNotify()
 
 void sendClearTripOdoToMonitor();
 void checkBoardMoving();
-void buzzerBuzz();
-void setupPeripherals();
 
 void listener_Button(int eventCode, int eventPin, int eventParam);
-myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
+myPushButton button(BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
   {
-    const int powerDownOption = 2;
+    const int menuOption1Time = 2;
 
     switch (eventCode)
     {
-      case button.EV_BUTTON_PRESSED:
-        break;
- 
       case button.EV_HELD_SECONDS:
         switch (eventParam) {
-          case powerDownOption:   // power down
-            fsm.trigger(EV_HELD_POWER_OFF_OPTION);
+          case menuOption1Time:   // power down
             break;
           default:
             fsm.trigger(EV_HELD_DOWN_WAIT);
@@ -123,8 +104,7 @@ myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int ev
 
       case button.EV_RELEASED:
         switch (eventParam) {
-          case powerDownOption:
-            deepSleep();
+          case menuOption1Time:
             break;
           default:
             if (eventParam < 1) {
@@ -135,8 +115,6 @@ myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int ev
             }
             break;
           }
-        break;
-      case button.EV_DOUBLETAP:
         break;
     }
   });
@@ -155,27 +133,6 @@ void checkBoardMoving() {
     }
   }
 }
-
-void buzzerBuzz()
-{
-  for (int i = 0; i < 100; i++)
-  {
-    digitalWrite(STICK_BUZZER_PIN, HIGH);
-    delay(1);
-    digitalWrite(STICK_BUZZER_PIN, LOW);
-    delay(1);
-  }
-}
-
-void setupPeripherals()
-{
-  pinMode(STICK_LED_PIN, OUTPUT);
-  pinMode(STICK_IR_PIN, OUTPUT);
-  pinMode(STICK_BUZZER_PIN, OUTPUT);
-  digitalWrite(STICK_LED_PIN, LED_ON);
-  digitalWrite(STICK_BUZZER_PIN, LOW);
-  u8g2.setFont(u8g2_font_4x6_tr);
-}
 /*------------------------------------------------------------------*/ 
 void setup()
 {
@@ -187,20 +144,7 @@ void setup()
 
   addFsmTransitions();
   fsm.run_machine();
-
-  setupPeripherals();
-
-  // if button held then we can shut down
-  button.serviceEvents();
-  while (button.isPressed())
-  {
-    fsm.run_machine();
-    button.serviceEvents();
-  }
-  button.serviceEvents();
 }
-
-BaseType_t xStatus;
 
 void loop()
 {

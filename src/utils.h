@@ -36,7 +36,6 @@ void deepSleep()
 {
   // WiFi.mode(WIFI_OFF);  // wifi
   btStop();           // ble
-  digitalWrite(STICK_LED_PIN, LED_OFF);
   u8g2.setPowerSave(1);
   delay(500);
   pureDeepSleep();
