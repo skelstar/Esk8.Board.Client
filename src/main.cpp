@@ -2,11 +2,11 @@
 #include <Wire.h>
 #include <myPushButton.h>
 #include <VescData.h>
+#include <Fsm.h>
+
 #include <WiFi.h>   
 #include <DNSServer.h>
 #include <WiFiManager.h>  
-
-#include <Fsm.h>
 
 #define ESP32_MINI "80:7D:3A:C5:6A:36"
 #define TTGO_T_DISPLAY_SERVER_ADDR "84:0D:8E:3B:91:3E"
@@ -21,15 +21,6 @@
 #define BATTERY_VOLTAGE_FULL          4.2 * 11      // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START  3.4 * 11      // 37.4
 #define BATTERY_VOLTAGE_CUTOFF_END    3.1 * 11      // 34.1
-
-#define LED_ON HIGH
-#define LED_OFF LOW
-
-#define STICK_LED_PIN     19
-#define STICK_IR_PIN      17
-#define STICK_BUZZER_PIN  26
-#define STICK_BUTTON_PIN  35
-
 /* ---------------------------------------------- */
 
 static boolean serverConnected = false;
@@ -42,33 +33,33 @@ static boolean serverConnected = false;
 #define CHECK_BATT_VOLTS  1
 #define CHECK_AMP_HOURS   2
 #define CHECK_MOTOR_CURRENT 3
+#define CHECK_MOVING 4
+
+#define BUTTON_PIN    0
 
 VescData vescdata, oldvescdata;
 
-bool valueChanged(uint8_t measure) {
-  switch (measure) {
+bool changed(uint8_t metric) {
+  bool valChanged = false;
+  switch (metric) {
     case CHECK_BATT_VOLTS:
-      if (oldvescdata.batteryVoltage != vescdata.batteryVoltage) {
-        oldvescdata.batteryVoltage = vescdata.batteryVoltage;
-        return true;
-      }
-      return false;
+      valChanged = oldvescdata.batteryVoltage != vescdata.batteryVoltage;
+      oldvescdata.batteryVoltage = vescdata.batteryVoltage;
+      return valChanged;
     case CHECK_AMP_HOURS:
-      if (oldvescdata.ampHours != vescdata.ampHours) {
-        oldvescdata.ampHours = vescdata.ampHours;
-        return true;
-      }
+      valChanged = oldvescdata.ampHours != vescdata.ampHours;
+      oldvescdata.ampHours = vescdata.ampHours;
+      return valChanged;
+    case CHECK_MOVING:
+      valChanged = oldvescdata.moving != vescdata.moving;
+      oldvescdata.moving = vescdata.moving;
+      return valChanged;
+    default:
+      Serial.printf("WARNING: Unhandled changed value %d\n", metric);
       return false;
-    case CHECK_MOTOR_CURRENT:
-      return true;
   }
   return false;
 }
-
-
-xQueueHandle xQueue;
-const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
-#define OTHER_CORE 0
 
 #include "display.h"
 #include "utils.h"
@@ -99,26 +90,17 @@ void bleReceivedNotify()
 #define OFFSTATE HIGH
 
 void sendClearTripOdoToMonitor();
-void checkBoardMoving();
-void buzzerBuzz();
-void setupPeripherals();
+void handleBoardMovingStopping();
 
 void listener_Button(int eventCode, int eventPin, int eventParam);
-myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
+myPushButton button(BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
   {
-    const int powerDownOption = 2;
-    const int connectToWifiOption = 3;
+    const int connectToWifiOption = 2;
 
     switch (eventCode)
     {
-      case button.EV_BUTTON_PRESSED:
-        break;
- 
       case button.EV_HELD_SECONDS:
         switch (eventParam) {
-          case powerDownOption:   // power down
-            fsm.trigger(EV_HELD_POWER_OFF_OPTION);
-            break;
           case connectToWifiOption:
             fsm.trigger(EV_HELD_WIFI_OPTION);
             break;
@@ -130,9 +112,6 @@ myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int ev
 
       case button.EV_RELEASED:
         switch (eventParam) {
-          case powerDownOption:
-            deepSleep();
-            break;
           case connectToWifiOption:
             connectToWifi();
             break;
@@ -146,45 +125,15 @@ myPushButton button(STICK_BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int ev
             break;
           }
         break;
-      case button.EV_DOUBLETAP:
-        break;
     }
   });
 
-void checkBoardMoving() {
-  if (oldvescdata.moving != vescdata.moving)
-  {
-    oldvescdata.moving = vescdata.moving;
-    if (vescdata.moving)
-    {
-      fsm.trigger(MOVING);
-    }
-    else
-    {
-      fsm.trigger(STOPPED_MOVING);
-    }
-  }
-}
+void handleBoardMovingStopping() {
 
-void buzzerBuzz()
-{
-  for (int i = 0; i < 100; i++)
+  if (changed(CHECK_MOVING))
   {
-    digitalWrite(STICK_BUZZER_PIN, HIGH);
-    delay(1);
-    digitalWrite(STICK_BUZZER_PIN, LOW);
-    delay(1);
+    fsm.trigger(vescdata.moving ? MOVING : STOPPED_MOVING);
   }
-}
-
-void setupPeripherals()
-{
-  pinMode(STICK_LED_PIN, OUTPUT);
-  pinMode(STICK_IR_PIN, OUTPUT);
-  pinMode(STICK_BUZZER_PIN, OUTPUT);
-  digitalWrite(STICK_LED_PIN, LED_ON);
-  digitalWrite(STICK_BUZZER_PIN, LOW);
-  u8g2.setFont(u8g2_font_4x6_tr);
 }
 /*------------------------------------------------------------------*/ 
 void setup()
@@ -197,26 +146,13 @@ void setup()
 
   addFsmTransitions();
   fsm.run_machine();
-
-  setupPeripherals();
-
-  // if button held then we can shut down
-  button.serviceEvents();
-  while (button.isPressed())
-  {
-    fsm.run_machine();
-    button.serviceEvents();
-  }
-  button.serviceEvents();
 }
-
-BaseType_t xStatus;
 
 void loop()
 {
   button.serviceEvents();
 
-  checkBoardMoving();
+  handleBoardMovingStopping();
 
   fsm.run_machine();
 
