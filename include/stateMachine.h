@@ -21,7 +21,7 @@ State state_connecting(
 //-------------------------------
 State state_connected(
   NULL,
-  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); }, 
+  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), changed(CHECK_BATT_VOLTS)); }, 
   NULL
 );
 //-------------------------------
@@ -33,13 +33,13 @@ State state_server_disconnected(
 //-------------------------------
 State state_battery_voltage_screen(
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); },
-  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), valueChanged(CHECK_BATT_VOLTS)); },
+  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), changed(CHECK_BATT_VOLTS)); },
   NULL
 );
 //-------------------------------
 State state_trip_page(
   [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); }, 
-  [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, valueChanged(CHECK_AMP_HOURS)); }, 
+  [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, changed(CHECK_AMP_HOURS)); }, 
   NULL
 );
 //-------------------------------

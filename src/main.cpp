@@ -29,27 +29,30 @@ static boolean serverConnected = false;
 #define CHECK_BATT_VOLTS  1
 #define CHECK_AMP_HOURS   2
 #define CHECK_MOTOR_CURRENT 3
+#define CHECK_MOVING 4
 
 #define BUTTON_PIN    0
 
 VescData vescdata, oldvescdata;
 
-bool valueChanged(uint8_t measure) {
-  switch (measure) {
+bool changed(uint8_t metric) {
+  bool valChanged = false;
+  switch (metric) {
     case CHECK_BATT_VOLTS:
-      if (oldvescdata.batteryVoltage != vescdata.batteryVoltage) {
-        oldvescdata.batteryVoltage = vescdata.batteryVoltage;
-        return true;
-      }
-      return false;
+      valChanged = oldvescdata.batteryVoltage != vescdata.batteryVoltage;
+      oldvescdata.batteryVoltage = vescdata.batteryVoltage;
+      return valChanged;
     case CHECK_AMP_HOURS:
-      if (oldvescdata.ampHours != vescdata.ampHours) {
-        oldvescdata.ampHours = vescdata.ampHours;
-        return true;
-      }
+      valChanged = oldvescdata.ampHours != vescdata.ampHours;
+      oldvescdata.ampHours = vescdata.ampHours;
+      return valChanged;
+    case CHECK_MOVING:
+      valChanged = oldvescdata.moving != vescdata.moving;
+      oldvescdata.moving = vescdata.moving;
+      return valChanged;
+    default:
+      Serial.printf("WARNING: Unhandled changed value %d\n", metric);
       return false;
-    case CHECK_MOTOR_CURRENT:
-      return true;
   }
   return false;
 }
@@ -83,7 +86,7 @@ void bleReceivedNotify()
 #define OFFSTATE HIGH
 
 void sendClearTripOdoToMonitor();
-void checkBoardMoving();
+void handleBoardMovingStopping();
 
 void listener_Button(int eventCode, int eventPin, int eventParam);
 myPushButton button(BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
@@ -119,18 +122,11 @@ myPushButton button(BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin
     }
   });
 
-void checkBoardMoving() {
-  if (oldvescdata.moving != vescdata.moving)
+void handleBoardMovingStopping() {
+
+  if (changed(CHECK_MOVING))
   {
-    oldvescdata.moving = vescdata.moving;
-    if (vescdata.moving)
-    {
-      fsm.trigger(MOVING);
-    }
-    else
-    {
-      fsm.trigger(STOPPED_MOVING);
-    }
+    fsm.trigger(vescdata.moving ? MOVING : STOPPED_MOVING);
   }
 }
 /*------------------------------------------------------------------*/ 
@@ -150,7 +146,7 @@ void loop()
 {
   button.serviceEvents();
 
-  checkBoardMoving();
+  handleBoardMovingStopping();
 
   fsm.run_machine();
 
