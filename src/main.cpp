@@ -113,7 +113,9 @@ myPushButton button(BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin
       case button.EV_RELEASED:
         switch (eventParam) {
           case connectToWifiOption:
-            connectToWifi();
+            if (connectToWifi()) {
+              fsm.trigger(EV_WIFI_CONNECTED);
+            }
             break;
           default:
             if (eventParam < 1) {

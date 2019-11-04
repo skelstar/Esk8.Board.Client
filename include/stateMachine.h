@@ -9,6 +9,7 @@ enum EventsEnum
   EV_HELD_DOWN_WAIT,
   EV_HELD_WIFI_OPTION,
   EV_NO_HELD_OPTION_SELECTED,
+  EV_WIFI_CONNECTED,
 } event;
 
 //-------------------------------
@@ -62,6 +63,12 @@ State state_button_held_wifi_option(
   NULL
 );
 //-------------------------------
+State state_wifi_connected(
+  [] { lcdMessage("connected!"); },
+  NULL,
+  NULL
+);
+//-------------------------------
 
 Fsm fsm(&state_connecting);
 
@@ -99,5 +106,8 @@ void addFsmTransitions() {
 
   event = EV_NO_HELD_OPTION_SELECTED;  // no option selected
   fsm.add_transition(&state_button_held_wait, &state_trip_page, event, NULL);
+
+  event = EV_WIFI_CONNECTED;
+  fsm.add_transition(&state_button_held_wifi_option, &state_wifi_connected, event, NULL);
 }
 /* ---------------------------------------------- */

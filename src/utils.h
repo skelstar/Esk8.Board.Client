@@ -63,6 +63,9 @@ bool connectToWifi() {
   wifiManager.setAPCallback(configModeCallback);
   wifiManager.autoConnect("esk8.board");
 
+  Serial.printf("Connected to wifi!\n");
+
+  return true;
   // if (!wifiManager.startConfigPortal("esk8.board")) {
   //     Serial.println("failed to connect and hit timeout");
   //     delay(5000);
