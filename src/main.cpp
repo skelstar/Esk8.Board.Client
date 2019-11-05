@@ -65,11 +65,15 @@ bool changed(uint8_t metric) {
 #include "utils.h"
 #include "stateMachine.h"
 
+xQueueHandle xPeripheralsTaskQueue;
+const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+
 void bleConnected()
 {
   Serial.printf("serverConnected! \n");
   serverConnected = true;
-  fsm.trigger(SERVER_CONNECTED);
+  EventsEnum e = SERVER_CONNECTED;
+  xQueueSendToBack(xPeripheralsTaskQueue, &e, xTicksToWait);
 }
 
 void bleDisconnected()
@@ -137,6 +141,46 @@ void handleBoardMovingStopping() {
     fsm.trigger(vescdata.moving ? MOVING : STOPPED_MOVING);
   }
 }
+
+#define OTHER_CORE  0
+#define LOOP_CORE   1
+
+BaseType_t xStatus;
+
+void peripheralsTask(void *pvParameters)
+{
+
+  Serial.printf("peripheralsTask running on core %d\n", xPortGetCoreID());
+
+  while (true)
+  {
+    button.serviceEvents();
+
+    handleBoardMovingStopping();
+
+    EventsEnum e;
+    xStatus = xQueueReceive(xPeripheralsTaskQueue, &e, xTicksToWait);
+    if (xStatus == pdPASS)
+    {
+      switch (e)
+      {
+      case SERVER_CONNECTED:
+      case SERVER_DISCONNECTED:
+        fsm.trigger(e);
+        break;
+      default:
+        Serial.printf("Unhandled event code: %d \n", e);
+      }
+    }
+
+    fsm.run_machine();
+
+    vTaskDelay(10);
+  }
+  vTaskDelete(NULL);
+}
+
+
 /*------------------------------------------------------------------*/ 
 void setup()
 {
@@ -146,17 +190,17 @@ void setup()
   Serial.begin(115200);
   Serial.println("\nStarting Arduino BLE Client application...");
 
+  xTaskCreatePinnedToCore(peripheralsTask, "peripheralsTask", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
+
+  xPeripheralsTaskQueue = xQueueCreate(1, sizeof(EventsEnum));
+
   addFsmTransitions();
   fsm.run_machine();
 }
 
 void loop()
 {
-  button.serviceEvents();
-
-  handleBoardMovingStopping();
-
-  fsm.run_machine();
+  // button.serviceEvents();
 
   if (serverConnected == false)
   {
