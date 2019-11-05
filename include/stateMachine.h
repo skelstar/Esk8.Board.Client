@@ -83,6 +83,7 @@ void addFsmTransitions() {
 
   event = EV_HELD_DOWN_WAIT;
   fsm.add_transition(&state_connecting, &state_button_held_wait, event, NULL);
+  fsm.add_transition(&state_server_disconnected, &state_button_held_wait, event, NULL);
   fsm.add_transition(&state_battery_voltage_screen, &state_button_held_wait, event, NULL);
   fsm.add_transition(&state_trip_page, &state_button_held_wait, event, NULL);
 

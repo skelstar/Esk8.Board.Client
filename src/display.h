@@ -225,7 +225,6 @@ void lcd_paramText(uint8_t x, uint8_t y, char *paramtext, float val1, float val2
   char buff2[8]; // Buffer big enough for 7-character float
   sprintf(buffx, paramtext, getFloatString(buff1, val1, 4, 0), getFloatString(buff2, val2, 2, 1));
   u8g2.setFont(FONT_SIZE_MED); // full
-  int width = u8g2.getStrWidth(buffx);
   u8g2.drawStr(x, y, buffx);
 }
 //--------------------------------------------------------------------------------
@@ -244,7 +243,7 @@ void lcd_line_text(uint8_t x, uint8_t y, char *text, bool centered)
 }
 //--------------------------------------------------------------------------------
 void lcdPrimaryTemplate(
-  char *topLine, 
+  const char *topLine, 
   char *primaryLine, 
   char *primaryUnits, 
   char *bottomLineLeft, 
@@ -281,7 +280,7 @@ void lcdPrimaryTemplate(
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
-void lcdConnectingPage(char *message, float ampHours, float odo)
+void lcdConnectingPage(const char *message, float ampHours, float odo)
 {
   char avgbuff[8];
   char aHbuff[8];

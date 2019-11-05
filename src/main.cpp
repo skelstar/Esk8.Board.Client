@@ -140,6 +140,12 @@ void setup()
 
   addFsmTransitions();
   fsm.run_machine();
+  
+  if (serverConnected == false)
+  {
+    Serial.printf("Trying to connect to server\n");
+    serverConnected = bleConnectToServer();
+  }
 }
 
 void loop()
@@ -149,12 +155,6 @@ void loop()
   handleBoardMovingStopping();
 
   fsm.run_machine();
-
-  if (serverConnected == false)
-  {
-    Serial.printf("Trying to connect to server\n");
-    serverConnected = bleConnectToServer();
-  }
 
   delay(10);
 }
