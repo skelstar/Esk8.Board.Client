@@ -1,12 +1,13 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <myPushButton.h>
+// #include <myPushButton.h>
+#include <LogansGreatButton.h>
 #include <VescData.h>
 #include <Fsm.h>
 
+// #define TTGO_T_DISPLAY_SERVER_ADDR "84:0D:8E:3B:91:3E"
+// #define TTGO_ESP32_OLED_V2_0 "80:7D:3A:B9:A8:6A"
 #define ESP32_MINI "80:7D:3A:C5:6A:36"
-#define TTGO_T_DISPLAY_SERVER_ADDR "84:0D:8E:3B:91:3E"
-#define TTGO_ESP32_OLED_V2_0 "80:7D:3A:B9:A8:6A"
 #define ESP32_MINI_B "80:7D:3A:C4:50:9A"
 #define ESP32_MINI_C "3C:71:BF:F0:C5:4A"
 #define SERVER_ADDRESS  ESP32_MINI_C
@@ -88,39 +89,63 @@ void bleReceivedNotify()
 void sendClearTripOdoToMonitor();
 void handleBoardMovingStopping();
 
-void listener_Button(int eventCode, int eventPin, int eventParam);
-myPushButton button(BUTTON_PIN, PULLUP, OFFSTATE, [](int eventCode, int eventPin, int eventParam)
+LogansGreatButton button(BUTTON_PIN);
+
+void onButtonActionPressed() 
+{
+	Serial.println();
+	Serial.println("The button has been PRESSED. What will the future hold?");
+}
+
+void onButtonPressShortRelease()
+{
+	Serial.println("End  of a SHORT Press");
+}
+
+void onButtonPressLongStart()
+{
+}
+
+void onButtonPressLongRelease()
+{
+}
+
+void onButtonHoldStart()
+{
+  fsm.trigger(EV_HELD_DOWN_WAIT);
+}
+
+void onButtonHoldContinuous()
+{
+  int secondsPassed = (millis() - button.getLastPressTime())/1000;
+  const int menuOption1Time = 2;
+
+  switch (secondsPassed) 
   {
-    const int menuOption1Time = 2;
-
-    switch (eventCode)
-    {
-      case button.EV_HELD_SECONDS:
-        switch (eventParam) {
-          case menuOption1Time:   // power down
-            break;
-          default:
-            fsm.trigger(EV_HELD_DOWN_WAIT);
-            break;
-        }
-        break;
-
-      case button.EV_RELEASED:
-        switch (eventParam) {
-          case menuOption1Time:
-            break;
-          default:
-            if (eventParam < 1) {
-              fsm.trigger(BUTTON_CLICK);
-            }
-            else {
-              fsm.trigger(EV_NO_HELD_OPTION_SELECTED);
-            }
-            break;
-          }
-        break;
+    case menuOption1Time:
+      break;
+    default:
+      fsm.trigger(EV_HELD_DOWN_WAIT);
+      break;
     }
-  });
+  }
+}
+
+void onButtonHoldRelease()
+{
+  int secondsPassed = (millis() - button.getLastPressTime())/1000;
+  const int menuOption1Time = 2;
+
+  switch (secondsPassed) 
+  {
+    case menuOption1Time:
+      break;
+    default:
+      fsm.trigger(EV_NO_HELD_OPTION_SELECTED);
+      break;
+    }
+  }
+}
 
 void handleBoardMovingStopping() {
 
@@ -138,19 +163,27 @@ void setup()
   Serial.begin(115200);
   Serial.println("\nStarting Arduino BLE Client application...");
 
+  button.onPressShortRelease(onButtonPressShortRelease);
+  button.onPressLongStart(onButtonPressLongStart);
+  button.onPressLongRelease(onButtonPressLongRelease);
+  button.onHoldStart(onButtonHoldStart);
+  button.onHoldContinuous(onButtonHoldContinuous);
+  button.onHoldRelease(onButtonHoldRelease);
+  button.onMultiClick(onMultiClicks);
+
   addFsmTransitions();
   fsm.run_machine();
   
-  if (serverConnected == false)
-  {
-    Serial.printf("Trying to connect to server\n");
-    serverConnected = bleConnectToServer();
-  }
+  // if (serverConnected == false)
+  // {
+  //   Serial.printf("Trying to connect to server\n");
+  //   serverConnected = bleConnectToServer();
+  // }
 }
 
 void loop()
 {
-  button.serviceEvents();
+  button.LOOPButtonController();
 
   handleBoardMovingStopping();
 
