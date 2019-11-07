@@ -357,8 +357,9 @@ void verticleLinesTemplate(
   // main line
   uint8_t chunkSize = 8;
   uint8_t spacing = 4;
+  uint8_t padding = 5;
   int fullWidth = chunkFloatWidth(mainLine, chunkSize, spacing);
-  int endX = chunkyDrawFloat(tft.width()-fullWidth, currentY, mainLine, spacing, chunkSize);
+  int endX = chunkyDrawFloat(tft.width()-fullWidth - padding, currentY, mainLine, spacing, chunkSize);
   currentY += chunkSize * 5;
     // units
   tft.setTextSize(2);
