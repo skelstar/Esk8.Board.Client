@@ -10,14 +10,14 @@
 #define ESP32_MINI "80:7D:3A:C5:6A:36"
 #define ESP32_MINI_B "80:7D:3A:C4:50:9A"
 #define ESP32_MINI_C "3C:71:BF:F0:C5:4A"
-#define SERVER_ADDRESS  ESP32_MINI_C
+#define SERVER_ADDRESS ESP32_MINI_C
 
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
-#define BATTERY_VOLTAGE_FULL          4.2 * 11      // 46.2
-#define BATTERY_VOLTAGE_CUTOFF_START  3.4 * 11      // 37.4
-#define BATTERY_VOLTAGE_CUTOFF_END    3.1 * 11      // 34.1
+#define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
+#define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
+#define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
 /* ---------------------------------------------- */
 
 static boolean serverConnected = false;
@@ -27,38 +27,41 @@ static boolean serverConnected = false;
 #define STATE_CONNECTED 2
 #define STATE_BATTERY_VOLTAGE_SCREEN 3
 
-#define CHECK_BATT_VOLTS  1
-#define CHECK_AMP_HOURS   2
+#define CHECK_BATT_VOLTS 1
+#define CHECK_AMP_HOURS 2
 #define CHECK_MOTOR_CURRENT 3
 #define CHECK_MOVING 4
 
-#define BUTTON_PIN    0
+#define BUTTON_PIN 0
 
 VescData vescdata, oldvescdata;
 
-bool changed(uint8_t metric) {
+bool changed(uint8_t metric)
+{
   bool valChanged = false;
-  switch (metric) {
-    case CHECK_BATT_VOLTS:
-      valChanged = oldvescdata.batteryVoltage != vescdata.batteryVoltage;
-      oldvescdata.batteryVoltage = vescdata.batteryVoltage;
-      return valChanged;
-    case CHECK_AMP_HOURS:
-      valChanged = oldvescdata.ampHours != vescdata.ampHours;
-      oldvescdata.ampHours = vescdata.ampHours;
-      return valChanged;
-    case CHECK_MOVING:
-      valChanged = oldvescdata.moving != vescdata.moving;
-      oldvescdata.moving = vescdata.moving;
-      return valChanged;
-    default:
-      Serial.printf("WARNING: Unhandled changed value %d\n", metric);
-      return false;
+  switch (metric)
+  {
+  case CHECK_BATT_VOLTS:
+    valChanged = oldvescdata.batteryVoltage != vescdata.batteryVoltage;
+    oldvescdata.batteryVoltage = vescdata.batteryVoltage;
+    return valChanged;
+  case CHECK_AMP_HOURS:
+    valChanged = oldvescdata.ampHours != vescdata.ampHours;
+    oldvescdata.ampHours = vescdata.ampHours;
+    return valChanged;
+  case CHECK_MOVING:
+    valChanged = oldvescdata.moving != vescdata.moving;
+    oldvescdata.moving = vescdata.moving;
+    return valChanged;
+  default:
+    Serial.printf("WARNING: Unhandled changed value %d\n", metric);
+    return false;
   }
   return false;
 }
 
-#include "display.h"
+// #include "display.h"
+#include "TTGO-T-Display.h"
 #include "utils.h"
 #include "stateMachine.h"
 
@@ -82,6 +85,7 @@ void bleReceivedNotify()
 }
 
 #include "bleClient.h"
+#include "buttons.h"
 /* ---------------------------------------------- */
 
 #define OFFSTATE HIGH
@@ -89,76 +93,19 @@ void bleReceivedNotify()
 void sendClearTripOdoToMonitor();
 void handleBoardMovingStopping();
 
-LogansGreatButton button(BUTTON_PIN);
-
-void onButtonActionPressed() 
+void handleBoardMovingStopping()
 {
-	Serial.println();
-	Serial.println("The button has been PRESSED. What will the future hold?");
-}
-
-void onButtonPressShortRelease()
-{
-	Serial.println("End  of a SHORT Press");
-}
-
-void onButtonPressLongStart()
-{
-}
-
-void onButtonPressLongRelease()
-{
-}
-
-void onButtonHoldStart()
-{
-  fsm.trigger(EV_HELD_DOWN_WAIT);
-}
-
-void onButtonHoldContinuous()
-{
-  int secondsPassed = (millis() - button.getLastPressTime())/1000;
-  const int menuOption1Time = 2;
-
-  switch (secondsPassed) 
-  {
-    case menuOption1Time:
-      break;
-    default:
-      fsm.trigger(EV_HELD_DOWN_WAIT);
-      break;
-    }
-  }
-}
-
-void onButtonHoldRelease()
-{
-  int secondsPassed = (millis() - button.getLastPressTime())/1000;
-  const int menuOption1Time = 2;
-
-  switch (secondsPassed) 
-  {
-    case menuOption1Time:
-      break;
-    default:
-      fsm.trigger(EV_NO_HELD_OPTION_SELECTED);
-      break;
-    }
-  }
-}
-
-void handleBoardMovingStopping() {
-
   if (changed(CHECK_MOVING))
   {
     fsm.trigger(vescdata.moving ? MOVING : STOPPED_MOVING);
   }
 }
-/*------------------------------------------------------------------*/ 
+/*------------------------------------------------------------------*/
 void setup()
 {
   Wire.begin(21, 22, 100000);
-  u8g2.begin();
+  tft.begin();
+  tft.setRotation(2);
 
   Serial.begin(115200);
   Serial.println("\nStarting Arduino BLE Client application...");
@@ -169,16 +116,15 @@ void setup()
   button.onHoldStart(onButtonHoldStart);
   button.onHoldContinuous(onButtonHoldContinuous);
   button.onHoldRelease(onButtonHoldRelease);
-  button.onMultiClick(onMultiClicks);
 
   addFsmTransitions();
   fsm.run_machine();
-  
-  // if (serverConnected == false)
-  // {
-  //   Serial.printf("Trying to connect to server\n");
-  //   serverConnected = bleConnectToServer();
-  // }
+
+  if (serverConnected == false)
+  {
+    Serial.printf("Trying to connect to server\n");
+    serverConnected = bleConnectToServer();
+  }
 }
 
 void loop()
@@ -191,4 +137,3 @@ void loop()
 
   delay(10);
 }
-
