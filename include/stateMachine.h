@@ -1,7 +1,7 @@
 
 enum EventsEnum
 {
-  BUTTON_CLICK,
+  EV_BUTTON_CLICK,
   SERVER_CONNECTED,
   SERVER_DISCONNECTED,
   MOVING,
@@ -9,6 +9,8 @@ enum EventsEnum
   EV_HELD_DOWN_WAIT,
   EV_NO_HELD_OPTION_SELECTED,
 } event;
+
+void triggerEvent(EventsEnum event);
 
 //-------------------------------
 State state_connecting(
@@ -38,7 +40,14 @@ State state_battery_voltage_screen(
 );
 //-------------------------------
 State state_trip_page(
-  [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); }, 
+  [] { 
+    if (serverConnected == false) {
+      triggerEvent(SERVER_DISCONNECTED);
+    }
+    else {
+      lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); 
+    }
+  }, 
   [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, changed(CHECK_AMP_HOURS)); }, 
   NULL
 );
@@ -58,6 +67,10 @@ State state_button_held_wait(
 
 Fsm fsm(&state_connecting);
 
+void triggerEvent(EventsEnum event) {
+  fsm.trigger(event);
+}
+
 void addFsmTransitions() {
 
   uint8_t event = SERVER_DISCONNECTED;
@@ -69,8 +82,9 @@ void addFsmTransitions() {
   // when state connected is entered it will transition to new state after 3 seconds
   // fsm.add_timed_transition(&state_connected, &state_trip_page, 3000, NULL);
 
-  event = BUTTON_CLICK;
+  event = EV_BUTTON_CLICK;
   fsm.add_transition(&state_trip_page, &state_battery_voltage_screen, event, NULL);
+  fsm.add_transition(&state_server_disconnected, &state_battery_voltage_screen, event, NULL);
   // if going to batt screen, go back to trip page after 2 seconds
   fsm.add_timed_transition(&state_battery_voltage_screen, &state_trip_page, 2000, NULL);
   fsm.add_transition(&state_button_held_wait, &state_trip_page, event, NULL);
