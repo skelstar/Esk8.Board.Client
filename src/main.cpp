@@ -5,12 +5,16 @@
 #include <Fsm.h>
 #include <LogansGreatButton.h>
 
+//======================================
 #define ESP32_MINI "80:7D:3A:C5:6A:36"
 #define TTGO_T_DISPLAY_SERVER_ADDR "84:0D:8E:3B:91:3E"
 #define TTGO_ESP32_OLED_V2_0 "80:7D:3A:B9:A8:6A"
 #define ESP32_MINI_B "80:7D:3A:C4:50:9A"
 #define ESP32_MINI_C "3C:71:BF:F0:C5:4A"
-#define SERVER_ADDRESS ESP32_MINI_C
+#define BLE_M5STICK   "3C:71:BF:45:FE:16"
+//--------------------------------------
+#define SERVER_ADDRESS BLE_M5STICK
+//======================================
 
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
