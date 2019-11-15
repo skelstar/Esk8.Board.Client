@@ -68,6 +68,11 @@ bool changed(uint8_t metric)
 #include "utils.h"
 #include "stateMachine.h"
 
+#include "IDevice.h"
+
+BLEDevice1 board;
+ESPNowDevice boardEsp;
+
 void bleConnected()
 {
   Serial.printf("serverConnected! \n");
@@ -105,6 +110,7 @@ void handleBoardMovingStopping()
     fsm.trigger(vescdata.moving ? MOVING : STOPPED_MOVING);
   }
 }
+
 /*------------------------------------------------------------------*/
 void setup()
 {
@@ -113,6 +119,26 @@ void setup()
 
   Serial.begin(115200);
   Serial.println("\nStarting Arduino BLE Client application...");
+
+  board.initialise();
+  board.connect();
+  board.onConnectedEvent([]{
+    Serial.printf("board.onConnectedEvent()\n");
+  });
+  board.onDisconnectedEvent([]{
+    Serial.printf("board.onDisconnectedEvent()\n");
+  });
+  board.fireEvents();
+
+  boardEsp.initialise();
+  boardEsp.connect();
+  boardEsp.onConnectedEvent([]{
+    Serial.printf("boardEsp.onConnectedEvent()\n");
+  });
+  boardEsp.onDisconnectedEvent([]{
+    Serial.printf("boardEsp.onDisconnectedEvent()\n");
+  });
+  boardEsp.fireEvents();
 
   button.onPressShortRelease(onButtonPressShortRelease);
   button.onPressLongStart(onButtonPressLongStart);
