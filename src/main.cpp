@@ -68,10 +68,11 @@ bool changed(uint8_t metric)
 #include "utils.h"
 #include "stateMachine.h"
 
-#include "IDevice.h"
+#include "bleClient.h"
 
-BLEDevice1 board;
-ESPNowDevice boardEsp;
+MyBLEClient board;
+// BLEDevice1 board;
+// ESPNowDevice boardEsp;
 
 void bleConnected()
 {
@@ -92,7 +93,6 @@ void bleReceivedNotify()
   Serial.printf("Received: %.1fV %.1fmAh %.1fm \n", vescdata.batteryVoltage, vescdata.ampHours, vescdata.odometer);
 }
 
-#include "bleClient.h"
 /* ---------------------------------------------- */
 
 #define OFFSTATE HIGH
@@ -121,24 +121,29 @@ void setup()
   Serial.println("\nStarting Arduino BLE Client application...");
 
   board.initialise();
-  board.connect();
-  board.onConnectedEvent([]{
-    Serial.printf("board.onConnectedEvent()\n");
-  });
-  board.onDisconnectedEvent([]{
-    Serial.printf("board.onDisconnectedEvent()\n");
-  });
-  board.fireEvents();
+  board.setOnConnectedEvent(bleConnected);
+  board.setOnDisconnectedEvent(bleDisconnected);
+  board.setOnNotifyEvent(bleReceivedNotify);
 
-  boardEsp.initialise();
-  boardEsp.connect();
-  boardEsp.onConnectedEvent([]{
-    Serial.printf("boardEsp.onConnectedEvent()\n");
-  });
-  boardEsp.onDisconnectedEvent([]{
-    Serial.printf("boardEsp.onDisconnectedEvent()\n");
-  });
-  boardEsp.fireEvents();
+  // board.initialise();
+  // board.connect();
+  // board.onConnectedEvent([]{
+  //   Serial.printf("board.onConnectedEvent()\n");
+  // });
+  // board.onDisconnectedEvent([]{
+  //   Serial.printf("board.onDisconnectedEvent()\n");
+  // });
+  // board.fireEvents();
+
+  // boardEsp.initialise();
+  // boardEsp.connect();
+  // boardEsp.onConnectedEvent([]{
+  //   Serial.printf("boardEsp.onConnectedEvent()\n");
+  // });
+  // boardEsp.onDisconnectedEvent([]{
+  //   Serial.printf("boardEsp.onDisconnectedEvent()\n");
+  // });
+  // boardEsp.fireEvents();
 
   button.onPressShortRelease(onButtonPressShortRelease);
   button.onPressLongStart(onButtonPressLongStart);
@@ -153,7 +158,7 @@ void setup()
   if (serverConnected == false)
   {
     Serial.printf("Trying to connect to server\n");
-    serverConnected = bleConnectToServer();
+    // serverConnected = bleConnectToServer();
   }
 }
 
