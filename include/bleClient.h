@@ -6,8 +6,9 @@ static BLERemoteCharacteristic *pRemoteCharacteristic;
 
 class MyClientCallback : public BLEClientCallbacks
 {
-  void onConnect(BLEClient *pclient);
-  void onDisconnect(BLEClient *pclient);
+  public:
+    void onConnect(BLEClient *pclient);
+    void onDisconnect(BLEClient *pclient);
 };
 
 class MyBLEClient : public IDevice {
@@ -62,14 +63,16 @@ class MyBLEClient : public IDevice {
     }
 };
 
+#ifndef myBleClient
 MyBLEClient myBleClient;
+#endif
 
-void onConnect(BLEClient *pclient)
+void MyClientCallback::onConnect(BLEClient *pclient)
 {
   myBleClient._onConnectedEvent();
 }
 
-void onDisconnect(BLEClient *pclient)
+void MyClientCallback::onDisconnect(BLEClient *pclient)
 {
   myBleClient._onDisconnectedEvent();
 }

@@ -98,7 +98,6 @@ void handleBoardMovingStopping();
 
 void handleBoardMovingStopping()
 {
-
   if (changed(CHECK_MOVING))
   {
     fsm.trigger(vescdata.moving ? MOVING : STOPPED_MOVING);
