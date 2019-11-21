@@ -6,28 +6,71 @@
 
 #define CHANNEL 1
 
-// prototypes
+// static void onDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len)
+// {
+//   _onNotifyEvent();
+// }
+
+void initESPNow();
+
+
+
+class EspNowClient : public IDevice
+{
+public:
+  EspNowClient()
+  {
+  }
+
+  void initialise()
+  {
+    initESPNow();
+  }
+
+  void connect()
+  {
+  }
+
+  void setOnConnectedEvent(callBack ptr_onConnectedEvent)
+  {
+    _onConnectedEvent = ptr_onConnectedEvent;
+  }
+  void setOnDisconnectedEvent(callBack ptr_onDisconnectedEvent)
+  {
+    _onDisconnectedEvent = ptr_onDisconnectedEvent;
+  }
+  void setOnNotifyEvent(callBack ptr_onNotifyEvent)
+  {
+    _onNotifyEvent = ptr_onNotifyEvent;
+  }
+
+private:
+};
+
+
+#ifndef espnowClient
+EspNowClient client;
+#endif
+
 void configDeviceAP();
-void onDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len);
+
+void onDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+  client._onNotifyEvent();
+}
 
 // Init ESP Now with fallback
-void InitESPNow() {
-
+void initESPNow()
+{
   WiFi.mode(WIFI_AP);
-  // configure device AP mode
   configDeviceAP();
-  // This is the mac address of the Slave in AP Mode
-  // Serial.print("AP MAC: "); Serial.println(WiFi.softAPmacAddress());
-
   WiFi.disconnect();
-  if (esp_now_init() == ESP_OK) {
-    Serial.println("ESPNow Init Success");
+  if (esp_now_init() == ESP_OK)
+  {
+    client._onConnectedEvent();
   }
-  else {
-    Serial.println("ESPNow Init Failed");
-    // Retry InitESPNow, add a counte and then restart?
-    // InitESPNow();
-    // or Simply Restart
+  else
+  {
+    client._onDisconnectedEvent();
     ESP.restart();
   }
 
@@ -35,21 +78,16 @@ void InitESPNow() {
 }
 
 // config AP SSID
-void configDeviceAP() {
+void configDeviceAP()
+{
   const char *SSID = "Slave_1";
   bool result = WiFi.softAP(SSID, "Slave_1_Password", CHANNEL, 0);
-  if (!result) {
+  if (!result)
+  {
     Serial.println("AP Config failed.");
-  } else {
+  }
+  else
+  {
     Serial.println("AP Config Success. Broadcasting with AP: " + String(SSID));
   }
-}
-
-void onDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-  char macStr[18];
-  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  Serial.print("Last Packet Recv from: "); Serial.println(macStr);
-  Serial.print("Last Packet Recv Data: "); Serial.println(*data);
-  Serial.println("");
 }

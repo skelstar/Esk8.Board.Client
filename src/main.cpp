@@ -83,6 +83,10 @@ void bleReceivedNotify()
 
 #include "espNow.h"
 
+#ifndef client
+// EspNowClient client;
+#endif
+
 /* ---------------------------------------------- */
 
 #define OFFSTATE HIGH
@@ -118,7 +122,24 @@ void setup()
   addFsmTransitions();
   fsm.run_machine();
 
-  InitESPNow();
+  client.setOnConnectedEvent([]{
+    Serial.printf("Connected!\n");
+  });
+  client.setOnDisconnectedEvent([]{
+    Serial.println("ESPNow Init Failed, restarting...");
+  });
+  client.setOnNotifyEvent([]{
+    Serial.printf("Notified!\n");
+    // char macStr[18];
+    // snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+    //         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+    // Serial.print("Last Packet Recv from: ");
+    // Serial.println(macStr);
+    // Serial.print("Last Packet Recv Data: ");
+    // Serial.println(*data);
+    // Serial.println("");
+  });  
+  client.initialise();
 
   // myBleClient.initialise();
   // myBleClient.setOnConnectedEvent([] {
@@ -138,11 +159,6 @@ void setup()
 
   //   // serverConnected = myBleClient.bleConnectToServer();
   // }
-
-  // testIDevice.setOnConnectedEvent([] {
-  //   Serial.printf("testIDevice.setOnConnectedEvent() triggered\n");
-  // });
-  // testIDevice.connect();
 }
 
 void loop()
