@@ -68,10 +68,6 @@ bool changed(uint8_t metric)
 #include "utils.h"
 #include "stateMachine.h"
 
-#include "testIDeviceClass.h"
-
-TestIDeviceClass testIDevice;
-
 void bleConnected()
 {
 }
@@ -85,7 +81,7 @@ void bleReceivedNotify()
   Serial.printf("Received: %.1fV %.1fmAh %.1fm \n", vescdata.batteryVoltage, vescdata.ampHours, vescdata.odometer);
 }
 
-#include "bleClient.h"
+#include "espNow.h"
 
 /* ---------------------------------------------- */
 
@@ -122,23 +118,26 @@ void setup()
   addFsmTransitions();
   fsm.run_machine();
 
-  myBleClient.initialise();
-  myBleClient.setOnConnectedEvent([] {
-    Serial.printf("myBleClient.setOnConnectedEvent()! \n");
-    serverConnected = true;
-    fsm.trigger(SERVER_CONNECTED);
-  });
-  myBleClient.setOnDisconnectedEvent([] {
-    serverConnected = false;
-    Serial.printf("myBleClient.setOnDisconnectedEvent() disconnected!");
-    fsm.trigger(SERVER_DISCONNECTED);
-  });
+  InitESPNow();
 
-  if (serverConnected == false)
-  {
-    Serial.printf("Trying to connect to server\n");
-    serverConnected = myBleClient.bleConnectToServer();
-  }
+  // myBleClient.initialise();
+  // myBleClient.setOnConnectedEvent([] {
+  //   Serial.printf("myBleClient.setOnConnectedEvent()! \n");
+  //   serverConnected = true;
+  //   fsm.trigger(SERVER_CONNECTED);
+  // });
+  // myBleClient.setOnDisconnectedEvent([] {
+  //   serverConnected = false;
+  //   Serial.printf("myBleClient.setOnDisconnectedEvent() disconnected!");
+  //   fsm.trigger(SERVER_DISCONNECTED);
+  // });
+
+  // if (serverConnected == false)
+  // {
+  //   Serial.printf("Trying to connect to server\n");
+
+  //   // serverConnected = myBleClient.bleConnectToServer();
+  // }
 
   // testIDevice.setOnConnectedEvent([] {
   //   Serial.printf("testIDevice.setOnConnectedEvent() triggered\n");
