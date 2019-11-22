@@ -4,8 +4,10 @@
 #include <VescData.h>
 #include <Fsm.h>
 #include <LogansGreatButton.h>
+#include "espNow.h"
 
 //======================================
+#ifdef BLEDevice
 #define ESP32_MINI "80:7D:3A:C5:6A:36"
 #define TTGO_T_DISPLAY_SERVER_ADDR "84:0D:8E:3B:91:3E"
 #define TTGO_ESP32_OLED_V2_0 "80:7D:3A:B9:A8:6A"
@@ -14,10 +16,10 @@
 #define BLE_M5STICK   "3C:71:BF:45:FE:16"
 //--------------------------------------
 #define SERVER_ADDRESS BLE_M5STICK
-//======================================
-
+//--------------------------------------
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#endif
 
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
@@ -36,7 +38,7 @@ static boolean serverConnected = false;
 #define CHECK_MOTOR_CURRENT 3
 #define CHECK_MOVING 4
 
-#define BUTTON_PIN 0
+#define BUTTON_PIN 35 // M5Stick pin 35
 
 VescData vescdata, oldvescdata;
 
@@ -68,20 +70,18 @@ bool changed(uint8_t metric)
 #include "utils.h"
 #include "stateMachine.h"
 
-void bleConnected()
+void deviceNotified()
 {
+  Serial.printf("Notified!\n");
+  // char macStr[18];
+  // snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+  //         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  // Serial.print("Last Packet Recv from: ");
+  // Serial.println(macStr);
+  // Serial.print("Last Packet Recv Data: ");
+  // Serial.println(*data);
+  // Serial.println("");
 }
-
-void bleDisconnected()
-{
-}
-
-void bleReceivedNotify()
-{
-  Serial.printf("Received: %.1fV %.1fmAh %.1fm \n", vescdata.batteryVoltage, vescdata.ampHours, vescdata.odometer);
-}
-
-#include "espNow.h"
 
 #ifndef client
 // EspNowClient client;
@@ -128,37 +128,8 @@ void setup()
   client.setOnDisconnectedEvent([]{
     Serial.println("ESPNow Init Failed, restarting...");
   });
-  client.setOnNotifyEvent([]{
-    Serial.printf("Notified!\n");
-    // char macStr[18];
-    // snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-    //         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-    // Serial.print("Last Packet Recv from: ");
-    // Serial.println(macStr);
-    // Serial.print("Last Packet Recv Data: ");
-    // Serial.println(*data);
-    // Serial.println("");
-  });  
+  client.setOnNotifyEvent(deviceNotified);  
   client.initialise();
-
-  // myBleClient.initialise();
-  // myBleClient.setOnConnectedEvent([] {
-  //   Serial.printf("myBleClient.setOnConnectedEvent()! \n");
-  //   serverConnected = true;
-  //   fsm.trigger(SERVER_CONNECTED);
-  // });
-  // myBleClient.setOnDisconnectedEvent([] {
-  //   serverConnected = false;
-  //   Serial.printf("myBleClient.setOnDisconnectedEvent() disconnected!");
-  //   fsm.trigger(SERVER_DISCONNECTED);
-  // });
-
-  // if (serverConnected == false)
-  // {
-  //   Serial.printf("Trying to connect to server\n");
-
-  //   // serverConnected = myBleClient.bleConnectToServer();
-  // }
 }
 
 void loop()

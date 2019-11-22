@@ -11,7 +11,7 @@ class MyClientCallback : public BLEClientCallbacks
     void onDisconnect(BLEClient *pclient);
 };
 
-class MyBLEClient : public IDevice {
+class MyBLEClient : public IEsk8Device {
 
   public:
     MyBLEClient() {

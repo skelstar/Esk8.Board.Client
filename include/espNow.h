@@ -1,21 +1,14 @@
-#ifndef IDevice
-#include <IDevice.h>
+#ifndef IEsk8Device
+#include <IEsk8Device.h>
 #endif
 #include <esp_now.h>
 #include <WiFi.h>
 
 #define CHANNEL 1
 
-// static void onDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len)
-// {
-//   _onNotifyEvent();
-// }
-
 void initESPNow();
 
-
-
-class EspNowClient : public IDevice
+class EspNowClient : public IEsk8Device
 {
 public:
   EspNowClient()
