@@ -83,6 +83,18 @@ void deviceNotified()
   // Serial.println("");
 }
 
+void sentToDevice() 
+{
+  Serial.printf("Data sent to device\n");
+  // char macStr[18];
+  // snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+  //          mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  // Serial.print("Last Packet Sent to: "); 
+  // Serial.println(macStr);
+  // Serial.print("Last Packet Send Status: "); 
+  // Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+}
+
 #ifndef client
 // EspNowClient client;
 #endif
@@ -128,7 +140,8 @@ void setup()
   client.setOnDisconnectedEvent([]{
     Serial.println("ESPNow Init Failed, restarting...");
   });
-  client.setOnNotifyEvent(deviceNotified);  
+  client.setOnNotifyEvent(deviceNotified); 
+  client.setOnSentEvent(sentToDevice);
   client.initialise();
 }
 

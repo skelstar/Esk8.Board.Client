@@ -36,6 +36,9 @@ public:
   {
     _onNotifyEvent = ptr_onNotifyEvent;
   }
+  void setOnSentEvent(callBack ptr_onSentEvent) {
+    _onSentEvent = ptr_onSentEvent;
+  }
 
 private:
 };
@@ -49,6 +52,10 @@ void configDeviceAP();
 
 void onDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   client._onNotifyEvent();
+}
+// callback when data is sent from Master to Slave
+void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  client._onSentEvent();
 }
 
 // Init ESP Now with fallback
@@ -68,6 +75,7 @@ void initESPNow()
   }
 
   esp_now_register_recv_cb(onDataRecv);
+  esp_now_register_send_cb(onDataSent);
 }
 
 // config AP SSID
