@@ -4,7 +4,8 @@
 #include <VescData.h>
 #include <Fsm.h>
 #include <LogansGreatButton.h>
-#include "espNow.h"
+// #include <IEsk8Device.h>
+#include <espNowClient.h>
 
 //======================================
 #ifdef BLEDevice
@@ -67,21 +68,9 @@ bool changed(uint8_t metric)
 }
 
 #include "display.h"
+#include "display-rangereport.h"
 #include "utils.h"
 #include "stateMachine.h"
-
-void deviceNotified()
-{
-  Serial.printf("Notified!\n");
-  // char macStr[18];
-  // snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-  //         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  // Serial.print("Last Packet Recv from: ");
-  // Serial.println(macStr);
-  // Serial.print("Last Packet Recv Data: ");
-  // Serial.println(*data);
-  // Serial.println("");
-}
 
 void sentToDevice() 
 {
@@ -98,6 +87,20 @@ void sentToDevice()
 #ifndef client
 // EspNowClient client;
 #endif
+
+void deviceNotified()
+{
+  Serial.printf("Notified!\n");
+  uint8_t numPackets = client.espData;
+  Serial.printf("Rx: %d\n", client.espData);
+
+
+  // char message[6];
+  // sprintf(message, "%d", client.espData);
+  // lcdMessage(message);
+
+  lcdMissingPacketReport(numPackets);
+}
 
 /* ---------------------------------------------- */
 
@@ -122,7 +125,7 @@ void setup()
   u8g2.begin();
 
   Serial.begin(115200);
-  Serial.println("\nStarting Arduino BLE Client application...");
+  Serial.println("\nStarting Missing packet report client...");
 
   button.onPressShortRelease(onButtonPressShortRelease);
   button.onPressLongStart(onButtonPressLongStart);

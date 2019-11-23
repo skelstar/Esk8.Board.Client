@@ -141,6 +141,8 @@ void chunky_draw_digit(
         }
     }
 }
+
+
 //--------------------------------------------------------------------------------
 void chunkyDrawFloat(uint8_t x, uint8_t y, char* number, char* units, uint8_t spacing, uint8_t pixelSize = 1) {
   
