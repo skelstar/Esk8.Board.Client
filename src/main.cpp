@@ -72,7 +72,7 @@ bool changed(uint8_t metric)
 #include "utils.h"
 #include "stateMachine.h"
 
-uint8_t sendCounter = 0;
+uint8_t sendCounter = 220;
 
 void sentToDevice() 
 {
@@ -87,13 +87,10 @@ uint8_t missedPacketCounter = 0;
 
 void deviceNotified()
 {
-  bool updateDisplay = false;
+  Serial.printf("Rx: %d | lastPacketId: %d\n", client.espData, lastPacketId);
 
-  if (lastPacketId == 255) {
-    lastPacketId = -1;
-  }
-
-  if (client.espData != (lastPacketId + 1)) {
+  if (client.espData != (lastPacketId + 1) &&
+      (client.espData != 0 && lastPacketId != 255)) {
     missedPacketCounter = missedPacketCounter + (client.espData - (lastPacketId + 1));
     Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, client.espData);
     lcdTripPage(missedPacketCounter, 1, vescdata.vescOnline, true); 
@@ -168,16 +165,38 @@ void loop()
     const uint8_t *addr = peer.peer_addr;
     esp_err_t result = esp_now_send(addr, &sendCounter, sizeof(sendCounter));
 
-    if (result == ESP_OK)
-    {
-      // Serial.printf("Sent OK (%d)\n", sendCounter-1);
-    }
-    else
-    {
-      Serial.println("Not sure what happened");
-      fsm.trigger(SERVER_DISCONNECTED);
+    switch (result) {
+      case ESP_OK:
+        break;
+      case ESP_ERR_ESPNOW_NOT_INIT:
+        Serial.printf("ESP_ERR_ESPNOW_NOT_INIT\n");
+        fsm.trigger(SERVER_DISCONNECTED);
+        break;
+      case ESP_ERR_ESPNOW_ARG:
+        Serial.printf("ESP_ERR_ESPNOW_ARG\n");
+        fsm.trigger(SERVER_DISCONNECTED);
+        break;
+      case ESP_ERR_ESPNOW_INTERNAL:
+        Serial.printf("ESP_ERR_ESPNOW_INTERNAL\n");
+        fsm.trigger(SERVER_DISCONNECTED);
+        break;
+      case ESP_ERR_ESPNOW_NO_MEM:
+        Serial.printf("ESP_ERR_ESPNOW_NO_MEM\n");
+        fsm.trigger(SERVER_DISCONNECTED);
+        break;
+      case ESP_ERR_ESPNOW_NOT_FOUND:
+        Serial.printf("Peer is not found\n");
+        fsm.trigger(SERVER_DISCONNECTED);
+        break;
+      case ESP_ERR_ESPNOW_IF:
+        Serial.printf("ESP_ERR_ESESP_ERR_ESPNOW_IFPNOW_NOT_INIT\n");
+        fsm.trigger(SERVER_DISCONNECTED);
+        break;
+      default:
+        Serial.printf("Not sure what happened (code: %d)\n", result);
+        fsm.trigger(SERVER_DISCONNECTED);
+        break;
     }
   }
-
   delay(10);
 }
