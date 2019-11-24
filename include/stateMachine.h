@@ -41,14 +41,12 @@ State state_battery_voltage_screen(
 //-------------------------------
 State state_trip_page(
   [] { 
-    if (serverConnected == false) {
-      triggerEvent(SERVER_DISCONNECTED);
-    }
-    else {
-      lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); 
-    }
+    Serial.printf("Entering state_trip_page\n");
+    lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); 
   }, 
-  [] { lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, changed(CHECK_AMP_HOURS)); }, 
+  [] { 
+    lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, changed(CHECK_AMP_HOURS)); 
+  }, 
   NULL
 );
 //-------------------------------
