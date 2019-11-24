@@ -72,16 +72,20 @@ bool changed(uint8_t metric)
 #include "utils.h"
 #include "stateMachine.h"
 
+uint8_t sendCounter = 0;
+
 void sentToDevice() 
 {
-  Serial.printf("Data sent to device\n");
-  // char macStr[18];
-  // snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-  //          mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  // Serial.print("Last Packet Sent to: "); 
-  // Serial.println(macStr);
-  // Serial.print("Last Packet Send Status: "); 
-  // Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  char macStr[18];
+  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+           peer.peer_addr[0], 
+           peer.peer_addr[1], 
+           peer.peer_addr[2], 
+           peer.peer_addr[3], 
+           peer.peer_addr[4], 
+           peer.peer_addr[5]);
+  Serial.print("Last Packet Sent to: "); 
+  Serial.println(macStr);
 }
 
 #ifndef client
@@ -148,6 +152,8 @@ void setup()
   client.initialise();
 }
 
+unsigned long now = 0;
+
 void loop()
 {
   button.LOOPButtonController();
@@ -155,6 +161,52 @@ void loop()
   handleBoardMovingStopping();
 
   fsm.run_machine();
+
+  if (millis() - now > 500) {
+    now = millis();
+    Serial.printf("Sending to: %02x:%02x:%02x:%02x%02x:%02x\n",
+      peer.peer_addr[0],
+      peer.peer_addr[1],
+      peer.peer_addr[2],
+      peer.peer_addr[3],
+      peer.peer_addr[4],
+      peer.peer_addr[5]
+    );
+    const uint8_t *addr = peer.peer_addr;
+    esp_err_t result = esp_now_send(addr, &sendCounter, sizeof(sendCounter));
+
+    sendCounter = sendCounter + 1;
+
+    if (result == ESP_OK)
+    {
+      Serial.printf("Sent OK (%d)\n", sendCounter-1);
+    }
+    else if (result == ESP_ERR_ESPNOW_NOT_INIT)
+    {
+      // How did we get so far!!
+      Serial.println("ESPNOW not Init.");
+    }
+    else if (result == ESP_ERR_ESPNOW_ARG)
+    {
+      Serial.println("Invalid Argument");
+    }
+    else if (result == ESP_ERR_ESPNOW_INTERNAL)
+    {
+      Serial.println("Internal Error");
+    }
+    else if (result == ESP_ERR_ESPNOW_NO_MEM)
+    {
+      Serial.println("ESP_ERR_ESPNOW_NO_MEM");
+    }
+    else if (result == ESP_ERR_ESPNOW_NOT_FOUND)
+    {
+      Serial.println("Peer not found.");
+    }
+    else
+    {
+      Serial.println("Not sure what happened");
+    }
+  }
 
   delay(10);
 }
