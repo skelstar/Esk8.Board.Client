@@ -79,15 +79,15 @@ float missedPacketCounter = 0.0;
 
 void deviceNotified()
 {
-  DEBUGVAL(client.espData, lastPacketId);
+  DEBUGVAL(client.espData.id, lastPacketId, client.espData.batteryVoltage);
 
-  if (client.espData != lastPacketId + 1) {
-    missedPacketCounter = missedPacketCounter + (client.espData - (lastPacketId + 1));
-    Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, client.espData);
+  if (client.espData.id != lastPacketId + 1) {
+    missedPacketCounter = missedPacketCounter + (client.espData.id - (lastPacketId + 1));
+    Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, client.espData.id);
     vescdata.ampHours = missedPacketCounter;
   }
 
-  lastPacketId = client.espData;
+  lastPacketId = client.espData.id;
 
   fsm.trigger(EV_RECV_PACKET);
 }
@@ -157,8 +157,8 @@ void loop()
     now = millis();
     const uint8_t *addr = peer.peer_addr;
 
-    uint8_t bs[sizeof(vescdata.id)];
-    memcpy(bs, &vescdata.id, sizeof(vescdata.id));
+    uint8_t bs[sizeof(vescdata)];
+    memcpy(bs, &vescdata, sizeof(vescdata));
 
     esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
 
