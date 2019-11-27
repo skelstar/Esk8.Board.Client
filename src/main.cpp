@@ -82,26 +82,25 @@ void sentToDevice()
 // EspNowClient client;
 #endif
 
-uint8_t lastPacketId = 0;
+unsigned long lastPacketId = 0;
 uint8_t missedPacketCounter = 0;
 
 void deviceNotified()
 {
-  Serial.printf("Rx: %d | lastPacketId: %d\n", client.espData, lastPacketId);
+  // Serial.printf("Rx: %d | lastPacketId: %d\n", client.espData, lastPacketId);
 
-  if (client.espData != (lastPacketId + 1) &&
-      (client.espData != 0 && lastPacketId != 255)) {
+  if (client.espData != lastPacketId + 1) {
     missedPacketCounter = missedPacketCounter + (client.espData - (lastPacketId + 1));
-    Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, client.espData);
+    Serial.printf("Missed packet: %u != %u\n", lastPacketId + 1, client.espData);
     lcdTripPage(missedPacketCounter, 1, vescdata.vescOnline, true); 
+  }
+  else {
+    Serial.printf("OK: %u == %u\n", lastPacketId + 1, client.espData);
   }
 
   lastPacketId = client.espData;
 
   fsm.trigger(SERVER_CONNECTED);
-
-  sendCounter = sendCounter + 1;
-
 }
 
 /* ---------------------------------------------- */
@@ -167,6 +166,7 @@ void loop()
 
     switch (result) {
       case ESP_OK:
+        sendCounter = sendCounter + 1;
         break;
       case ESP_ERR_ESPNOW_NOT_INIT:
         Serial.printf("ESP_ERR_ESPNOW_NOT_INIT\n");
