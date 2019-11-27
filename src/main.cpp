@@ -6,6 +6,9 @@
 #include <LogansGreatButton.h>
 // #include <IEsk8Device.h>
 #include <espNowClient.h>
+#include <debug.h>
+
+#define NDEBUG
 
 //======================================
 #ifdef BLEDevice
@@ -26,13 +29,6 @@
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
 #define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
 /* ---------------------------------------------- */
-
-static boolean serverConnected = false;
-
-#define STATE_POWER_UP 0
-#define STATE_CONNECTING 1
-#define STATE_CONNECTED 2
-#define STATE_BATTERY_VOLTAGE_SCREEN 3
 
 #define CHECK_BATT_VOLTS 1
 #define CHECK_AMP_HOURS 2
@@ -78,12 +74,8 @@ void sentToDevice()
 {
 }
 
-#ifndef client
-// EspNowClient client;
-#endif
-
 uint8_t lastPacketId = 0;
-uint8_t missedPacketCounter = 0;
+float missedPacketCounter = 0.0;
 
 void deviceNotified()
 {
@@ -93,15 +85,14 @@ void deviceNotified()
       (client.espData != 0 && lastPacketId != 255)) {
     missedPacketCounter = missedPacketCounter + (client.espData - (lastPacketId + 1));
     Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, client.espData);
-    lcdTripPage(missedPacketCounter, 1, vescdata.vescOnline, true); 
+    vescdata.ampHours = missedPacketCounter;
   }
 
   lastPacketId = client.espData;
 
-  fsm.trigger(SERVER_CONNECTED);
+  fsm.trigger(EV_RECV_PACKET);
 
   sendCounter = sendCounter + 1;
-
 }
 
 /* ---------------------------------------------- */
@@ -123,11 +114,13 @@ void handleBoardMovingStopping()
 /*------------------------------------------------------------------*/
 void setup()
 {
+ 
   Wire.begin(21, 22, 100000);
   u8g2.begin();
 
   Serial.begin(115200);
   Serial.println("\nStarting Missing packet report client...");
+  LOG_INIT(115200);
 
   button.onPressShortRelease(onButtonPressShortRelease);
   button.onPressLongStart(onButtonPressLongStart);
@@ -135,6 +128,10 @@ void setup()
   button.onHoldStart(onButtonHoldStart);
   button.onHoldContinuous(onButtonHoldContinuous);
   button.onHoldRelease(onButtonHoldRelease);
+
+  vescdata.ampHours = 0.0;
+  vescdata.batteryVoltage = 0.0;
+  vescdata.odometer = 0.0;
 
   addFsmTransitions();
   fsm.run_machine();
