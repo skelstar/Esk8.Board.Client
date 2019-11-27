@@ -70,8 +70,6 @@ bool changed(uint8_t metric)
 #include "utils.h"
 #include "stateMachine.h"
 
-unsigned long sendCounter = 0;
-
 void sentToDevice() 
 {
 }
@@ -159,14 +157,14 @@ void loop()
     now = millis();
     const uint8_t *addr = peer.peer_addr;
 
-    uint8_t bs[sizeof(sendCounter)];
-    memcpy(bs, &sendCounter, sizeof(sendCounter));
+    uint8_t bs[sizeof(vescdata.id)];
+    memcpy(bs, &vescdata.id, sizeof(vescdata.id));
 
     esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
 
     switch (result) {
       case ESP_OK:
-        sendCounter = sendCounter + 1;
+        vescdata.id = vescdata.id + 1;
         break;
       case ESP_ERR_ESPNOW_NOT_INIT:
         Serial.printf("ESP_ERR_ESPNOW_NOT_INIT\n");
