@@ -1,4 +1,9 @@
 #include <Arduino.h>
+
+#define DEBUG_OUT Serial
+#define PRINTSTREAM_FALLBACK
+#include "Debug.hpp"
+
 #include <Wire.h>
 #include <myPushButton.h>
 #include <VescData.h>
@@ -6,9 +11,6 @@
 #include <LogansGreatButton.h>
 // #include <IEsk8Device.h>
 #include <espNowClient.h>
-#include <debug.h>
-
-#define NDEBUG
 
 //======================================
 #ifdef BLEDevice
@@ -68,21 +70,20 @@ bool changed(uint8_t metric)
 #include "utils.h"
 #include "stateMachine.h"
 
-uint8_t sendCounter = 220;
+unsigned long sendCounter = 0;
 
 void sentToDevice() 
 {
 }
 
-uint8_t lastPacketId = 0;
+unsigned long lastPacketId = 0;
 float missedPacketCounter = 0.0;
 
 void deviceNotified()
 {
-  Serial.printf("Rx: %d | lastPacketId: %d\n", client.espData, lastPacketId);
+  DEBUGVAL(client.espData, lastPacketId);
 
-  if (client.espData != (lastPacketId + 1) &&
-      (client.espData != 0 && lastPacketId != 255)) {
+  if (client.espData != lastPacketId + 1) {
     missedPacketCounter = missedPacketCounter + (client.espData - (lastPacketId + 1));
     Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, client.espData);
     vescdata.ampHours = missedPacketCounter;
@@ -120,7 +121,6 @@ void setup()
 
   Serial.begin(115200);
   Serial.println("\nStarting Missing packet report client...");
-  LOG_INIT(115200);
 
   button.onPressShortRelease(onButtonPressShortRelease);
   button.onPressLongStart(onButtonPressLongStart);

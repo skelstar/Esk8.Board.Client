@@ -16,7 +16,7 @@ void triggerEvent(EventsEnum event);
 //-------------------------------
 State state_connecting(
   [] { 
-    LOGLN("state_connecting()");
+    DEBUGFN("Started");
     lcdConnectingPage("connecting...", vescdata.ampHours, vescdata.odometer);
   }, 
   NULL, 
@@ -24,14 +24,14 @@ State state_connecting(
 );
 //-------------------------------
 State state_connected(
-  [] { LOGLN("state_connected()"); },
+  [] { DEBUGFN("Started"); },
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), changed(CHECK_BATT_VOLTS)); }, 
   NULL
 );
 //-------------------------------
 State state_server_disconnected(
   [] {
-    LOGLN("state_server_disconnected()");
+    DEBUGFN("Started");
     lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); 
   }, 
   NULL, 
@@ -40,7 +40,7 @@ State state_server_disconnected(
 //-------------------------------
 State state_battery_voltage_screen(
   [] { 
-    LOGLN("state_battery_voltage_screen()");
+    DEBUGFN("Started");
     drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); 
   },
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), changed(CHECK_BATT_VOLTS)); },
@@ -49,7 +49,7 @@ State state_battery_voltage_screen(
 //-------------------------------
 State state_trip_page(
   [] { 
-    LOGLN("state_trip_page()");
+    DEBUGFN("Started");
     lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); 
   }, 
   [] { 
@@ -60,7 +60,7 @@ State state_trip_page(
 //-------------------------------
 State state_moving_screen(
   [] { 
-    LOGLN("state_moving_screen()");
+    DEBUGFN("Started");
     clearScreen(); 
   }, 
   NULL, 
@@ -69,7 +69,7 @@ State state_moving_screen(
 //-------------------------------
 State state_button_held_wait(
   [] { 
-    LOGLN("state_moving_screen()");
+    DEBUGFN("Started");
     lcdMessage("..."); Serial.printf("state_button_held_wait\n"); 
   }, 
   NULL, 
