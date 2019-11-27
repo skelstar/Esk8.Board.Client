@@ -1,4 +1,9 @@
 #include <Arduino.h>
+
+#define DEBUG_OUT Serial
+#define PRINTSTREAM_FALLBACK
+#include "Debug.hpp"
+
 #include <Wire.h>
 #include <myPushButton.h>
 #include <VescData.h>
@@ -26,13 +31,6 @@
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
 #define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
 /* ---------------------------------------------- */
-
-static boolean serverConnected = false;
-
-#define STATE_POWER_UP 0
-#define STATE_CONNECTING 1
-#define STATE_CONNECTED 2
-#define STATE_BATTERY_VOLTAGE_SCREEN 3
 
 #define CHECK_BATT_VOLTS 1
 #define CHECK_AMP_HOURS 2
@@ -72,35 +70,28 @@ bool changed(uint8_t metric)
 #include "utils.h"
 #include "stateMachine.h"
 
-uint8_t sendCounter = 220;
+unsigned long sendCounter = 0;
 
 void sentToDevice() 
 {
 }
 
-#ifndef client
-// EspNowClient client;
-#endif
-
 unsigned long lastPacketId = 0;
-uint8_t missedPacketCounter = 0;
+float missedPacketCounter = 0.0;
 
 void deviceNotified()
 {
-  // Serial.printf("Rx: %d | lastPacketId: %d\n", client.espData, lastPacketId);
+  DEBUGVAL(client.espData, lastPacketId);
 
   if (client.espData != lastPacketId + 1) {
     missedPacketCounter = missedPacketCounter + (client.espData - (lastPacketId + 1));
-    Serial.printf("Missed packet: %u != %u\n", lastPacketId + 1, client.espData);
-    lcdTripPage(missedPacketCounter, 1, vescdata.vescOnline, true); 
-  }
-  else {
-    Serial.printf("OK: %u == %u\n", lastPacketId + 1, client.espData);
+    Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, client.espData);
+    vescdata.ampHours = missedPacketCounter;
   }
 
   lastPacketId = client.espData;
 
-  fsm.trigger(SERVER_CONNECTED);
+  fsm.trigger(EV_RECV_PACKET);
 }
 
 /* ---------------------------------------------- */
@@ -122,6 +113,7 @@ void handleBoardMovingStopping()
 /*------------------------------------------------------------------*/
 void setup()
 {
+ 
   Wire.begin(21, 22, 100000);
   u8g2.begin();
 
@@ -134,6 +126,10 @@ void setup()
   button.onHoldStart(onButtonHoldStart);
   button.onHoldContinuous(onButtonHoldContinuous);
   button.onHoldRelease(onButtonHoldRelease);
+
+  vescdata.ampHours = 0.0;
+  vescdata.batteryVoltage = 0.0;
+  vescdata.odometer = 0.0;
 
   addFsmTransitions();
   fsm.run_machine();
@@ -162,7 +158,11 @@ void loop()
   if (millis() - now > 500) {
     now = millis();
     const uint8_t *addr = peer.peer_addr;
-    esp_err_t result = esp_now_send(addr, &sendCounter, sizeof(sendCounter));
+
+    uint8_t bs[sizeof(sendCounter)];
+    memcpy(bs, &sendCounter, sizeof(sendCounter));
+
+    esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
 
     switch (result) {
       case ESP_OK:

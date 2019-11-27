@@ -8,6 +8,7 @@ enum EventsEnum
   STOPPED_MOVING,
   EV_HELD_DOWN_WAIT,
   EV_NO_HELD_OPTION_SELECTED,
+  EV_RECV_PACKET,
 } event;
 
 void triggerEvent(EventsEnum event);
@@ -15,6 +16,7 @@ void triggerEvent(EventsEnum event);
 //-------------------------------
 State state_connecting(
   [] { 
+    DEBUGFN("Started");
     lcdConnectingPage("connecting...", vescdata.ampHours, vescdata.odometer);
   }, 
   NULL, 
@@ -22,26 +24,32 @@ State state_connecting(
 );
 //-------------------------------
 State state_connected(
-  NULL,
+  [] { DEBUGFN("Started"); },
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), changed(CHECK_BATT_VOLTS)); }, 
   NULL
 );
 //-------------------------------
 State state_server_disconnected(
-  [] { lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); }, 
+  [] {
+    DEBUGFN("Started");
+    lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); 
+  }, 
   NULL, 
   NULL
 );
 //-------------------------------
 State state_battery_voltage_screen(
-  [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); },
+  [] { 
+    DEBUGFN("Started");
+    drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); 
+  },
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), changed(CHECK_BATT_VOLTS)); },
   NULL
 );
 //-------------------------------
 State state_trip_page(
   [] { 
-    Serial.printf("Entering state_trip_page\n");
+    DEBUGFN("Started");
     lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); 
   }, 
   [] { 
@@ -51,13 +59,19 @@ State state_trip_page(
 );
 //-------------------------------
 State state_moving_screen(
-  [] { clearScreen(); }, 
+  [] { 
+    DEBUGFN("Started");
+    clearScreen(); 
+  }, 
   NULL, 
   NULL
 );
 //-------------------------------
 State state_button_held_wait(
-  [] { lcdMessage("..."); Serial.printf("state_button_held_wait\n"); }, 
+  [] { 
+    DEBUGFN("Started");
+    lcdMessage("..."); Serial.printf("state_button_held_wait\n"); 
+  }, 
   NULL, 
   NULL
 );
@@ -80,6 +94,9 @@ void addFsmTransitions() {
   // when state connected is entered it will transition to new state after 3 seconds
   // fsm.add_timed_transition(&state_connected, &state_trip_page, 3000, NULL);
 
+  event = EV_RECV_PACKET;
+  fsm.add_transition(&state_connecting, &state_trip_page, event, NULL);
+  
   event = EV_BUTTON_CLICK;
   fsm.add_transition(&state_trip_page, &state_battery_voltage_screen, event, NULL);
   fsm.add_transition(&state_server_disconnected, &state_battery_voltage_screen, event, NULL);
