@@ -75,16 +75,17 @@ void sentToDevice()
 
 unsigned long lastPacketId = 0;
 float missedPacketCounter = 0.0;
+unsigned long sendCounter = 0;
 
 void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   memcpy(/*dest*/&vescdata, /*src*/data, data_len);
 
-  DEBUGVAL(vescdata.id, lastPacketId, vescdata.batteryVoltage);
+  DEBUGVAL(vescdata.id, sendCounter, vescdata.batteryVoltage);
 
-  if (vescdata.id != lastPacketId + 1) {
-    missedPacketCounter = missedPacketCounter + (vescdata.id - (lastPacketId + 1));
-    Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, vescdata.id);
+  if (vescdata.id != sendCounter) {
+    // missedPacketCounter = missedPacketCounter + (vescdata.id - (lastPacketId + 1));
+    // Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, vescdata.id);
     vescdata.ampHours = missedPacketCounter;
   }
 
@@ -158,6 +159,7 @@ void loop()
     now = millis();
     const uint8_t *addr = peer.peer_addr;
 
+    vescdata.id = sendCounter;
     uint8_t bs[sizeof(vescdata)];
     memcpy(bs, &vescdata, sizeof(vescdata));
 
@@ -165,7 +167,7 @@ void loop()
 
     switch (result) {
       case ESP_OK:
-        vescdata.id = vescdata.id + 1;
+        sendCounter++;
         break;
       case ESP_ERR_ESPNOW_NOT_INIT:
         Serial.printf("ESP_ERR_ESPNOW_NOT_INIT\n");
