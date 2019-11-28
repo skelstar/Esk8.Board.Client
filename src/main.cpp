@@ -9,7 +9,6 @@
 #include <VescData.h>
 #include <Fsm.h>
 #include <LogansGreatButton.h>
-// #include <IEsk8Device.h>
 #include <espNowClient.h>
 
 //======================================
@@ -77,7 +76,7 @@ void sentToDevice()
 unsigned long lastPacketId = 0;
 float missedPacketCounter = 0.0;
 
-void deviceNotified(const uint8_t *data, uint8_t data_len)
+void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   memcpy(/*dest*/&vescdata, /*src*/data, data_len);
 
@@ -140,7 +139,7 @@ void setup()
   client.setOnDisconnectedEvent([]{
     Serial.println("ESPNow Init Failed, restarting...");
   });
-  client.setOnNotifyEvent(deviceNotified); 
+  client.setOnNotifyEvent(packetReceived); 
   client.setOnSentEvent(sentToDevice);
   client.initialise();
 }
