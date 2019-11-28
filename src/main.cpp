@@ -79,19 +79,20 @@ unsigned long sendCounter = 0;
 
 void packetReceived(const uint8_t *data, uint8_t data_len)
 {
-  memcpy(/*dest*/&vescdata, /*src*/data, data_len);
+  VescData rxdata;
+  memcpy(/*dest*/&rxdata, /*src*/data, data_len);
 
-  DEBUGVAL(vescdata.id, sendCounter, vescdata.batteryVoltage);
+  DEBUGVAL(rxdata.id, sendCounter, lastPacketId, rxdata.batteryVoltage);
 
-  if (vescdata.id != sendCounter) {
-    // missedPacketCounter = missedPacketCounter + (vescdata.id - (lastPacketId + 1));
-    // Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, vescdata.id);
+  if (lastPacketId != rxdata.id - 1) {
+    uint8_t lost = (rxdata.id - 1) - lastPacketId;
+    missedPacketCounter = missedPacketCounter + lost;
+    Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
     vescdata.ampHours = missedPacketCounter;
+    fsm.trigger(EV_RECV_PACKET);
   }
 
-  lastPacketId = vescdata.id;
-
-  fsm.trigger(EV_RECV_PACKET);
+  lastPacketId = rxdata.id;
 }
 
 /* ---------------------------------------------- */
