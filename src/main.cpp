@@ -77,17 +77,19 @@ void sentToDevice()
 unsigned long lastPacketId = 0;
 float missedPacketCounter = 0.0;
 
-void deviceNotified()
+void deviceNotified(const uint8_t *data, uint8_t data_len)
 {
-  DEBUGVAL(client.espData.id, lastPacketId, client.espData.batteryVoltage);
+  memcpy(/*dest*/&vescdata, /*src*/data, data_len);
 
-  if (client.espData.id != lastPacketId + 1) {
-    missedPacketCounter = missedPacketCounter + (client.espData.id - (lastPacketId + 1));
-    Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, client.espData.id);
+  DEBUGVAL(vescdata.id, lastPacketId, vescdata.batteryVoltage);
+
+  if (vescdata.id != lastPacketId + 1) {
+    missedPacketCounter = missedPacketCounter + (vescdata.id - (lastPacketId + 1));
+    Serial.printf("Missed packet: %d != %d\n", lastPacketId + 1, vescdata.id);
     vescdata.ampHours = missedPacketCounter;
   }
 
-  lastPacketId = client.espData.id;
+  lastPacketId = vescdata.id;
 
   fsm.trigger(EV_RECV_PACKET);
 }
