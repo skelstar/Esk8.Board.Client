@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
+#define PRINTSTREAM_FALLBACK 1
 #define DEBUG_OUT Serial
-#define PRINTSTREAM_FALLBACK
 #include "Debug.hpp"
 
 #include <Wire.h>
@@ -10,21 +10,6 @@
 #include <Fsm.h>
 #include <LogansGreatButton.h>
 #include <espNowClient.h>
-
-//======================================
-#ifdef BLEDevice
-#define ESP32_MINI "80:7D:3A:C5:6A:36"
-#define TTGO_T_DISPLAY_SERVER_ADDR "84:0D:8E:3B:91:3E"
-#define TTGO_ESP32_OLED_V2_0 "80:7D:3A:B9:A8:6A"
-#define ESP32_MINI_B "80:7D:3A:C4:50:9A"
-#define ESP32_MINI_C "3C:71:BF:F0:C5:4A"
-#define BLE_M5STICK   "3C:71:BF:45:FE:16"
-//--------------------------------------
-#define SERVER_ADDRESS BLE_M5STICK
-//--------------------------------------
-#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#endif
 
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
@@ -64,32 +49,41 @@ bool changed(uint8_t metric)
   return false;
 }
 
+unsigned long lastPacketId = 0;
+float missedPacketCounter = 0.0;
+unsigned long sendCounter = 0;
+bool syncdWithServer = false;
+
 #include "display.h"
 #include "display-rangereport.h"
 #include "utils.h"
 #include "stateMachine.h"
 
-void sentToDevice() 
+void sentToDevice()
 {
 }
-
-unsigned long lastPacketId = 0;
-float missedPacketCounter = 0.0;
-unsigned long sendCounter = 0;
 
 void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   VescData rxdata;
-  memcpy(/*dest*/&rxdata, /*src*/data, data_len);
+  memcpy(/*dest*/ &rxdata, /*src*/ data, data_len);
 
   DEBUGVAL(rxdata.id, sendCounter, lastPacketId, rxdata.batteryVoltage);
 
-  if (lastPacketId != rxdata.id - 1) {
-    uint8_t lost = (rxdata.id - 1) - lastPacketId;
-    missedPacketCounter = missedPacketCounter + lost;
-    Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
-    vescdata.ampHours = missedPacketCounter;
-    fsm.trigger(EV_RECV_PACKET);
+  if (lastPacketId != rxdata.id - 1)
+  {
+    if (syncdWithServer)
+    {
+      uint8_t lost = (rxdata.id - 1) - lastPacketId;
+      missedPacketCounter = missedPacketCounter + lost;
+      Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
+      vescdata.ampHours = missedPacketCounter;
+      fsm.trigger(EV_RECV_PACKET);
+    }
+  }
+  else
+  {
+    syncdWithServer = true;
   }
 
   lastPacketId = rxdata.id;
@@ -114,7 +108,7 @@ void handleBoardMovingStopping()
 /*------------------------------------------------------------------*/
 void setup()
 {
- 
+
   Wire.begin(21, 22, 100000);
   u8g2.begin();
 
@@ -135,13 +129,14 @@ void setup()
   addFsmTransitions();
   fsm.run_machine();
 
-  client.setOnConnectedEvent([]{
+  client.setOnConnectedEvent([] {
     Serial.printf("Connected!\n");
   });
-  client.setOnDisconnectedEvent([]{
+  client.setOnDisconnectedEvent([] {
     Serial.println("ESPNow Init Failed, restarting...");
+    syncdWithServer = false;
   });
-  client.setOnNotifyEvent(packetReceived); 
+  client.setOnNotifyEvent(packetReceived);
   client.setOnSentEvent(sentToDevice);
   client.initialise();
 }
@@ -156,7 +151,8 @@ void loop()
 
   fsm.run_machine();
 
-  if (millis() - now > 500) {
+  if (millis() - now > 500)
+  {
     now = millis();
     const uint8_t *addr = peer.peer_addr;
 
@@ -166,38 +162,39 @@ void loop()
 
     esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
 
-    switch (result) {
-      case ESP_OK:
-        sendCounter++;
-        break;
-      case ESP_ERR_ESPNOW_NOT_INIT:
-        Serial.printf("ESP_ERR_ESPNOW_NOT_INIT\n");
-        fsm.trigger(SERVER_DISCONNECTED);
-        break;
-      case ESP_ERR_ESPNOW_ARG:
-        Serial.printf("ESP_ERR_ESPNOW_ARG\n");
-        fsm.trigger(SERVER_DISCONNECTED);
-        break;
-      case ESP_ERR_ESPNOW_INTERNAL:
-        Serial.printf("ESP_ERR_ESPNOW_INTERNAL\n");
-        fsm.trigger(SERVER_DISCONNECTED);
-        break;
-      case ESP_ERR_ESPNOW_NO_MEM:
-        Serial.printf("ESP_ERR_ESPNOW_NO_MEM\n");
-        fsm.trigger(SERVER_DISCONNECTED);
-        break;
-      case ESP_ERR_ESPNOW_NOT_FOUND:
-        Serial.printf("Peer is not found\n");
-        fsm.trigger(SERVER_DISCONNECTED);
-        break;
-      case ESP_ERR_ESPNOW_IF:
-        Serial.printf("ESP_ERR_ESESP_ERR_ESPNOW_IFPNOW_NOT_INIT\n");
-        fsm.trigger(SERVER_DISCONNECTED);
-        break;
-      default:
-        Serial.printf("Not sure what happened (code: %d)\n", result);
-        fsm.trigger(SERVER_DISCONNECTED);
-        break;
+    switch (result)
+    {
+    case ESP_OK:
+      sendCounter++;
+      break;
+    case ESP_ERR_ESPNOW_NOT_INIT:
+      Serial.printf("ESP_ERR_ESPNOW_NOT_INIT\n");
+      fsm.trigger(SERVER_DISCONNECTED);
+      break;
+    case ESP_ERR_ESPNOW_ARG:
+      Serial.printf("ESP_ERR_ESPNOW_ARG\n");
+      fsm.trigger(SERVER_DISCONNECTED);
+      break;
+    case ESP_ERR_ESPNOW_INTERNAL:
+      Serial.printf("ESP_ERR_ESPNOW_INTERNAL\n");
+      fsm.trigger(SERVER_DISCONNECTED);
+      break;
+    case ESP_ERR_ESPNOW_NO_MEM:
+      Serial.printf("ESP_ERR_ESPNOW_NO_MEM\n");
+      fsm.trigger(SERVER_DISCONNECTED);
+      break;
+    case ESP_ERR_ESPNOW_NOT_FOUND:
+      Serial.printf("Peer is not found\n");
+      fsm.trigger(SERVER_DISCONNECTED);
+      break;
+    case ESP_ERR_ESPNOW_IF:
+      Serial.printf("ESP_ERR_ESESP_ERR_ESPNOW_IFPNOW_NOT_INIT\n");
+      fsm.trigger(SERVER_DISCONNECTED);
+      break;
+    default:
+      Serial.printf("Not sure what happened (code: %d)\n", result);
+      fsm.trigger(SERVER_DISCONNECTED);
+      break;
     }
   }
   delay(10);

@@ -43,12 +43,14 @@ void onButtonHoldRelease()
   int secondsPassed = (millis() - button.getLastPressTime()) / 1000;
   const int menuOption1Time = 2;
 
-  switch (secondsPassed)
-  {
-  case menuOption1Time:
-    break;
-  default:
-    fsm.trigger(EV_NO_HELD_OPTION_SELECTED);
-    break;
-  }
+  fsm.trigger(EV_HELD_OPTION_SELECTED);
+
+  // switch (secondsPassed)
+  // {
+  // case menuOption1Time:
+  //   break;
+  // default:
+  //   fsm.trigger(EV_NO_HELD_OPTION_SELECTED);
+  //   break;
+  // }
 }

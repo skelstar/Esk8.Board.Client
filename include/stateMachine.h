@@ -8,6 +8,7 @@ enum EventsEnum
   STOPPED_MOVING,
   EV_HELD_DOWN_WAIT,
   EV_NO_HELD_OPTION_SELECTED,
+  EV_HELD_OPTION_SELECTED,
   EV_RECV_PACKET,
 } event;
 
@@ -16,7 +17,7 @@ void triggerEvent(EventsEnum event);
 //-------------------------------
 State state_connecting(
   [] { 
-    DEBUGFN("Started");
+    DEBUG("state_connecting");
     lcdConnectingPage("connecting...", vescdata.ampHours, vescdata.odometer);
   }, 
   NULL, 
@@ -24,14 +25,14 @@ State state_connecting(
 );
 //-------------------------------
 State state_connected(
-  [] { DEBUGFN("Started"); },
+  [] { DEBUG("state_connected"); },
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), changed(CHECK_BATT_VOLTS)); }, 
   NULL
 );
 //-------------------------------
 State state_server_disconnected(
   [] {
-    DEBUGFN("Started");
+    DEBUG("state_server_disconnected");
     lcdConnectingPage("disconnected", vescdata.ampHours, vescdata.odometer); 
   }, 
   NULL, 
@@ -40,7 +41,7 @@ State state_server_disconnected(
 //-------------------------------
 State state_battery_voltage_screen(
   [] { 
-    DEBUGFN("Started");
+    DEBUG("state_battery_voltage_screen");
     drawBattery(getBatteryPercentage(vescdata.batteryVoltage), true); 
   },
   [] { drawBattery(getBatteryPercentage(vescdata.batteryVoltage), changed(CHECK_BATT_VOLTS)); },
@@ -49,7 +50,7 @@ State state_battery_voltage_screen(
 //-------------------------------
 State state_trip_page(
   [] { 
-    DEBUGFN("Started");
+    DEBUG("state_trip_page");
     lcdTripPage(vescdata.ampHours, vescdata.odometer, vescdata.vescOnline, true); 
   }, 
   [] { 
@@ -60,7 +61,7 @@ State state_trip_page(
 //-------------------------------
 State state_moving_screen(
   [] { 
-    DEBUGFN("Started");
+    DEBUG("state_moving_screen");
     clearScreen(); 
   }, 
   NULL, 
@@ -69,10 +70,30 @@ State state_moving_screen(
 //-------------------------------
 State state_button_held_wait(
   [] { 
-    DEBUGFN("Started");
-    lcdMessage("..."); Serial.printf("state_button_held_wait\n"); 
+    DEBUG("state_button_held_wait");
+    lcdMessage("...");
   }, 
   NULL, 
+  NULL
+);
+//-------------------------------
+State state_button_held_clear_missed_packets(
+  [] { 
+    DEBUG("state_button_held_clear_missed_packets");
+    lcdMessage("Clear missed");
+  }, 
+  NULL, 
+  NULL
+);
+//-------------------------------
+State state_button_held_clear_missed_packets_selected(
+  [] { 
+    DEBUG("state_button_held_clear_missed_packets");
+    lcdMessage("Cleared!");
+    missedPacketCounter = 0;
+    vescdata.ampHours = 0;
+  }, 
+  NULL,
   NULL
 );
 //-------------------------------
@@ -115,6 +136,12 @@ void addFsmTransitions() {
   fsm.add_transition(&state_server_disconnected, &state_button_held_wait, event, NULL);
   fsm.add_transition(&state_battery_voltage_screen, &state_button_held_wait, event, NULL);
   fsm.add_transition(&state_trip_page, &state_button_held_wait, event, NULL);
+  fsm.add_transition(&state_button_held_wait, &state_button_held_clear_missed_packets, event, NULL);
+
+
+  event = EV_HELD_OPTION_SELECTED;
+  fsm.add_transition(&state_button_held_clear_missed_packets, &state_button_held_clear_missed_packets_selected, event, NULL);
+  fsm.add_timed_transition(&state_button_held_clear_missed_packets_selected, &state_trip_page, 1000, NULL);
 
   event = EV_NO_HELD_OPTION_SELECTED;  // no option selected
   fsm.add_transition(&state_button_held_wait, &state_trip_page, event, NULL);
