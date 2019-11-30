@@ -9,7 +9,10 @@
 #include <VescData.h>
 #include <Fsm.h>
 #include <LogansGreatButton.h>
-#include <espNowClient.h>
+
+#define IS_CONTROLLER 1
+
+#include <nrf24L01Client.h>
 
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
@@ -63,18 +66,18 @@ void sentToDevice()
 {
 }
 
-void packetReceived(const uint8_t *data, uint8_t data_len)
+void packetReceived(const void *data, uint8_t data_len)
 {
-  VescData rxdata;
-  memcpy(/*dest*/ &rxdata, /*src*/ data, data_len);
+  BoardPacket recv_pkt;
+  memcpy(/*dest*/ &recv_pkt, /*src*/ data, data_len);
 
-  DEBUGVAL(rxdata.id, sendCounter, lastPacketId, rxdata.batteryVoltage);
+  DEBUGVAL(recv_pkt.id, sendCounter, lastPacketId);
 
-  if (lastPacketId != rxdata.id - 1)
+  if (lastPacketId != recv_pkt.id - 1)
   {
     if (syncdWithServer)
     {
-      uint8_t lost = (rxdata.id - 1) - lastPacketId;
+      uint8_t lost = (recv_pkt.id - 1) - lastPacketId;
       missedPacketCounter = missedPacketCounter + lost;
       Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
       vescdata.ampHours = missedPacketCounter;
@@ -86,7 +89,7 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
     syncdWithServer = true;
   }
 
-  lastPacketId = rxdata.id;
+  lastPacketId = recv_pkt.id;
 }
 
 /* ---------------------------------------------- */
@@ -133,12 +136,13 @@ void setup()
     Serial.printf("Connected!\n");
   });
   client.setOnDisconnectedEvent([] {
-    Serial.println("ESPNow Init Failed, restarting...");
+    Serial.println("Init Failed, restarting...");
     syncdWithServer = false;
   });
   client.setOnNotifyEvent(packetReceived);
   client.setOnSentEvent(sentToDevice);
   client.initialise();
+  initNRF24L01(nrf24.RF24_CLIENT);
 }
 
 unsigned long now = 0;
@@ -151,50 +155,18 @@ void loop()
 
   fsm.run_machine();
 
-  if (millis() - now > 500)
+  client.update();
+
+  if (millis() - now > 1000)
   {
     now = millis();
-    const uint8_t *addr = peer.peer_addr;
 
-    vescdata.id = sendCounter;
-    uint8_t bs[sizeof(vescdata)];
-    memcpy(bs, &vescdata, sizeof(vescdata));
+    nrf24.send_packet.id = sendCounter++;
 
-    esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
-
-    switch (result)
+    bool success = sendPacket();
+    if (!success)
     {
-    case ESP_OK:
-      sendCounter++;
-      break;
-    case ESP_ERR_ESPNOW_NOT_INIT:
-      Serial.printf("ESP_ERR_ESPNOW_NOT_INIT\n");
-      fsm.trigger(SERVER_DISCONNECTED);
-      break;
-    case ESP_ERR_ESPNOW_ARG:
-      Serial.printf("ESP_ERR_ESPNOW_ARG\n");
-      fsm.trigger(SERVER_DISCONNECTED);
-      break;
-    case ESP_ERR_ESPNOW_INTERNAL:
-      Serial.printf("ESP_ERR_ESPNOW_INTERNAL\n");
-      fsm.trigger(SERVER_DISCONNECTED);
-      break;
-    case ESP_ERR_ESPNOW_NO_MEM:
-      Serial.printf("ESP_ERR_ESPNOW_NO_MEM\n");
-      fsm.trigger(SERVER_DISCONNECTED);
-      break;
-    case ESP_ERR_ESPNOW_NOT_FOUND:
-      Serial.printf("Peer is not found\n");
-      fsm.trigger(SERVER_DISCONNECTED);
-      break;
-    case ESP_ERR_ESPNOW_IF:
-      Serial.printf("ESP_ERR_ESESP_ERR_ESPNOW_IFPNOW_NOT_INIT\n");
-      fsm.trigger(SERVER_DISCONNECTED);
-      break;
-    default:
-      Serial.printf("Not sure what happened (code: %d)\n", result);
-      fsm.trigger(SERVER_DISCONNECTED);
-      break;
+      DEBUG("sendPacket() failed!");
     }
   }
   delay(10);
