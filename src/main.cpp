@@ -1,3 +1,7 @@
+#define DEBUG_OUT Serial
+#define PRINTSTREAM_FALLBACK
+#include "Debug.hpp"
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <myPushButton.h>
@@ -12,8 +16,9 @@
 #define ESP32_MINI_B "80:7D:3A:C4:50:9A"
 #define ESP32_MINI_C "3C:71:BF:F0:C5:4A"
 #define BLE_M5STICK   "3C:71:BF:45:FE:16"
+#define ESP32_MINI_WITH_BATT_CONNECTOR "80:7D:3A:C5:62:96"
 //--------------------------------------
-#define SERVER_ADDRESS BLE_M5STICK
+#define SERVER_ADDRESS ESP32_MINI_WITH_BATT_CONNECTOR
 //======================================
 
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
@@ -26,65 +31,42 @@
 
 static boolean serverConnected = false;
 
-#define STATE_POWER_UP 0
-#define STATE_CONNECTING 1
-#define STATE_CONNECTED 2
-#define STATE_BATTERY_VOLTAGE_SCREEN 3
-
 #define CHECK_BATT_VOLTS 1
 #define CHECK_AMP_HOURS 2
 #define CHECK_MOTOR_CURRENT 3
 #define CHECK_MOVING 4
 
-#define BUTTON_PIN 0
+#define BUTTON_0_PIN 0
 
-VescData vescdata, oldvescdata;
+VescData vescdata, old_vescdata;
 
-bool changed(uint8_t metric)
-{
-  bool valChanged = false;
-  switch (metric)
-  {
-  case CHECK_BATT_VOLTS:
-    valChanged = oldvescdata.batteryVoltage != vescdata.batteryVoltage;
-    oldvescdata.batteryVoltage = vescdata.batteryVoltage;
-    return valChanged;
-  case CHECK_AMP_HOURS:
-    valChanged = oldvescdata.ampHours != vescdata.ampHours;
-    oldvescdata.ampHours = vescdata.ampHours;
-    return valChanged;
-  case CHECK_MOVING:
-    valChanged = oldvescdata.moving != vescdata.moving;
-    oldvescdata.moving = vescdata.moving;
-    return valChanged;
-  default:
-    Serial.printf("WARNING: Unhandled changed value %d\n", metric);
-    return false;
-  }
-  return false;
-}
-
-#include "display.h"
 #include "utils.h"
+#include "TTGO_T_Display.h"
+#include "screens.h"
 #include "stateMachine.h"
 
 void bleConnected()
 {
   Serial.printf("serverConnected! \n");
   serverConnected = true;
-  fsm.trigger(SERVER_CONNECTED);
+  fsm.trigger(EV_SERVER_CONNECTED);
 }
 
 void bleDisconnected()
 {
   serverConnected = false;
   Serial.printf("disconnected!");
-  fsm.trigger(SERVER_DISCONNECTED);
+  fsm.trigger(EV_SERVER_DISCONNECTED);
 }
 
 void bleReceivedNotify()
 {
   Serial.printf("Received: %.1fV %.1fmAh %.1fm \n", vescdata.batteryVoltage, vescdata.ampHours, vescdata.odometer);
+  if (vescdata.moving != old_vescdata.moving)
+  {
+    TRIGGER(vescdata.moving ? EV_MOVING : EV_STOPPED_MOVING);
+  }
+  memcpy(&old_vescdata, &vescdata, sizeof(vescdata));
 }
 
 #include "bleClient.h"
@@ -92,34 +74,19 @@ void bleReceivedNotify()
 
 #define OFFSTATE HIGH
 
-void sendClearTripOdoToMonitor();
-void handleBoardMovingStopping();
-
 #include "buttons.h"
 
-void handleBoardMovingStopping()
-{
-
-  if (changed(CHECK_MOVING))
-  {
-    fsm.trigger(vescdata.moving ? MOVING : STOPPED_MOVING);
-  }
-}
 /*------------------------------------------------------------------*/
 void setup()
 {
   Wire.begin(21, 22, 100000);
-  u8g2.begin();
 
   Serial.begin(115200);
   Serial.println("\nStarting Arduino BLE Client application...");
 
-  button.onPressShortRelease(onButtonPressShortRelease);
-  button.onPressLongStart(onButtonPressLongStart);
-  button.onPressLongRelease(onButtonPressLongRelease);
-  button.onHoldStart(onButtonHoldStart);
-  button.onHoldContinuous(onButtonHoldContinuous);
-  button.onHoldRelease(onButtonHoldRelease);
+  button0_initialise();
+
+  display_initialise();
 
   addFsmTransitions();
   fsm.run_machine();
@@ -133,9 +100,7 @@ void setup()
 
 void loop()
 {
-  button.LOOPButtonController();
-
-  handleBoardMovingStopping();
+  button0.LOOPButtonController();
 
   fsm.run_machine();
 

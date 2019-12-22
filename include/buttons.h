@@ -1,5 +1,5 @@
 
-LogansGreatButton button(BUTTON_PIN);
+LogansGreatButton button0(BUTTON_0_PIN);
 
 void onButtonActionPressed()
 {
@@ -7,7 +7,7 @@ void onButtonActionPressed()
 
 void onButtonPressShortRelease()
 {
-  fsm.trigger(EV_BUTTON_CLICK);
+  TRIGGER(EV_BUTTON_CLICK);
 }
 
 void onButtonPressLongStart()
@@ -20,12 +20,11 @@ void onButtonPressLongRelease()
 
 void onButtonHoldStart()
 {
-  fsm.trigger(EV_HELD_DOWN_WAIT);
 }
 
 void onButtonHoldContinuous()
 {
-  int secondsPassed = (millis() - button.getLastPressTime()) / 1000;
+  int secondsPassed = (millis() - button0.getLastPressTime()) / 1000;
   const int menuOption1Time = 2;
 
   switch (secondsPassed)
@@ -33,14 +32,13 @@ void onButtonHoldContinuous()
     case menuOption1Time:
       break;
     default:
-      fsm.trigger(EV_HELD_DOWN_WAIT);
       break;
   }
 }
 
 void onButtonHoldRelease()
 {
-  int secondsPassed = (millis() - button.getLastPressTime()) / 1000;
+  int secondsPassed = (millis() - button0.getLastPressTime()) / 1000;
   const int menuOption1Time = 2;
 
   switch (secondsPassed)
@@ -48,7 +46,16 @@ void onButtonHoldRelease()
   case menuOption1Time:
     break;
   default:
-    fsm.trigger(EV_NO_HELD_OPTION_SELECTED);
     break;
   }
+}
+
+void button0_initialise()
+{
+  button0.onPressShortRelease(onButtonPressShortRelease);
+  button0.onPressLongStart(onButtonPressLongStart);
+  button0.onPressLongRelease(onButtonPressLongRelease);
+  button0.onHoldStart(onButtonHoldStart);
+  button0.onHoldContinuous(onButtonHoldContinuous);
+  button0.onHoldRelease(onButtonHoldRelease);
 }
