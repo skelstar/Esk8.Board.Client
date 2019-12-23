@@ -24,16 +24,19 @@ void onButtonHoldStart()
 
 void onButtonHoldContinuous()
 {
-  int secondsPassed = (millis() - button0.getLastPressTime()) / 1000;
-  const int menuOption1Time = 2;
+  lcd_message_middle(MC_DATUM, "reseting", 2);
+  while(1);
+  
+  // int secondsPassed = (millis() - button0.getLastPressTime()) / 1000;
+  // const int menuOption1Time = 2;
 
-  switch (secondsPassed)
-  {
-    case menuOption1Time:
-      break;
-    default:
-      break;
-  }
+  // switch (secondsPassed)
+  // {
+  //   case menuOption1Time:
+  //     break;
+  //   default:
+  //     break;
+  // }
 }
 
 void onButtonHoldRelease()
