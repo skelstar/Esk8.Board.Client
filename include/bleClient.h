@@ -44,3 +44,16 @@ bool bleConnectToServer()
   }
   return true;
 }
+
+void send_packet_to_board()
+{
+  uint8_t bs[sizeof(ControllerData)];
+  memcpy(bs, &controller_packet, sizeof(ControllerData));
+  bool success = true;
+  pRemoteCharacteristic->writeValue(bs, sizeof(ControllerData), true);
+  if (success)
+  {
+    controller_packet.id = controller_packet.id + 1;
+  }
+  controller_packet.command = 0;  // clear command for next time
+}

@@ -52,6 +52,8 @@
 #define FONT_1_HEIGHT   27
 #define FONT_2_HEIGHT   31
 
+#define FONT_2_LINE_HEIGHT  35  // at 4 lines in landscape
+
 #define SMOOTH_FONT
 
 // #define SPI_FREQUENCY  27000000
@@ -247,6 +249,35 @@ void chunkyDrawFloat(uint8_t datum, char *number, char *units, uint8_t spacing, 
     DEBUG("Unhandled datum");
   }
   return;
+}
+
+void chunkyDrawFloat(uint8_t datum, uint8_t y, uint8_t num_chars, char *number, uint8_t size)
+{
+  int spacing = 1;
+  int pixel = 1;
+  uint8_t x = 0;
+
+  switch (size)
+  {
+    case 2:
+      spacing = 3;
+      pixel = 5;
+      break;
+    default:
+      DEBUGVAL("Unhandled font size: ", size);
+      break;
+  }
+
+  switch (datum)
+  {
+    case TR_DATUM:
+      x = TFT_WIDTH - (num_chars * (pixel*5) + (num_chars-1) * spacing);
+      chunkyDrawFloat(x, y, number, "", spacing, pixel);
+      break;
+    default:
+      DEBUGVAL("Unhandled datum: ", datum);
+      break;
+  }
 }
 
 //---------------------------------------------------------------
